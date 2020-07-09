@@ -2,19 +2,27 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+
+	// "net/url"
 	"os"
 	"os/user"
-	// "os"
+
+	// "encoding/json"
+	"github.com/akamensky/argparse"
 )
 
-func successSum(a, b int) int {
-	return a + b
-}
+const dir string = "~/Pictures/Wallpapers/"
+const subreddit string = "wallpapers"
+const minWidth int = 1920
+const minHeight int = 1080
+const postsPerRequest int = 20
+const loops int = 5
 
-func failSum(a, b int) int {
-	return a - b
+type foo struct {
+	Bar string
 }
 
 func validURL(URL string) bool {
@@ -42,20 +50,20 @@ func prepareDirectory(directory string) bool {
 	return true
 }
 
-func verifySubreddit(subreddit string) bool{
+func verifySubreddit(subreddit string) bool {
 	URL := "https://reddit.com/r/" + subreddit
 	client := &http.Client{}
 
-	req, err := http.NewRequest("GET", URL , nil)
+	req, err := http.NewRequest("GET", URL, nil)
 	if err != nil {
-			log.Fatalln(err)
+		log.Fatalln(err)
 	}
 
 	req.Header.Set("User-Agent", "Go_Wallpaper_Downloader")
 
 	resp, err := client.Do(req)
 	if err != nil {
-			log.Fatalln(err)
+		log.Fatalln(err)
 	}
 	if resp.StatusCode == 200 {
 		return true
@@ -63,10 +71,52 @@ func verifySubreddit(subreddit string) bool{
 	return false
 }
 
+func getJSON(URL string, target interface{}) {
+	// var val = new(Foo)
+	client := &http.Client{}
+
+	req, _ := http.NewRequest("GET", URL, nil)
+	req.Header.Set("User-Agent", "wallpaperDownloader")
+	resp, httpErr := client.Do(req)
+
+	if httpErr != nil {
+		fmt.Println("HTTP Error = ", httpErr)
+		log.Fatal(httpErr)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		bodyString := string(bodyBytes)
+		fmt.Println("Body = ", bodyString)
+	}
+
+}
+
+func getPosts(subreddit, topRange, after string, loop int) {
+	for i := 0; i < 1; i++ {
+		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%s&after=%s", subreddit, topRange, postsPerRequest, after)
+		// var URL string = "http://example.com/"
+		foo1 := new(foo) // or &Foo{}
+		getJSON(URL, foo1)
+		println(foo1.Bar)
+	}
+}
+
 func main() {
-	fmt.Println("Hello World")
-	// valid := validURL("http://i.imgur.com/Z6kdWmA.jpg")
-	// valid := prepareDirectory("/Pictures/Wallpapers/Reddit/")
-	// valid := verifySubreddit("unixporn")
-	// print(valid)
+
+	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
+	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
+	err := parser.Parse(os.Args)
+
+	if err != nil {
+		fmt.Print(parser.Usage(err))
+		os.Exit(1)
+	}
+	fmt.Println("Selected Range = ", *topRange)
+	getPosts(subreddit, *topRange, "", loops)
+
 }
