@@ -25,6 +25,8 @@ type foo struct {
 	Bar string
 }
 
+var client *http.Client = &http.Client{}
+
 func validURL(URL string) bool {
 	resp, err := http.Get(URL)
 	fmt.Print(resp.Status)
@@ -50,9 +52,27 @@ func prepareDirectory(directory string) bool {
 	return true
 }
 
+func makeHTTPReq(URL string) *http.Response {
+	req, err := http.NewRequest("GET", URL, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	req.Header.Set("User-Agent", "Go_Wallpaper_Downloader")
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if resp.StatusCode == 200 {
+		return resp
+	}
+	log.Fatalln(err)
+	return resp
+}
+
 func verifySubreddit(subreddit string) bool {
 	URL := "https://reddit.com/r/" + subreddit
-	client := &http.Client{}
 
 	req, err := http.NewRequest("GET", URL, nil)
 	if err != nil {
@@ -73,7 +93,7 @@ func verifySubreddit(subreddit string) bool {
 
 func getJSON(URL string, target interface{}) {
 	// var val = new(Foo)
-	client := &http.Client{}
+	// client := &http.Client{}
 
 	req, _ := http.NewRequest("GET", URL, nil)
 	req.Header.Set("User-Agent", "wallpaperDownloader")
@@ -116,7 +136,9 @@ func main() {
 		fmt.Print(parser.Usage(err))
 		os.Exit(1)
 	}
+
 	fmt.Println("Selected Range = ", *topRange)
+
 	getPosts(subreddit, *topRange, "", loops)
 
 }
