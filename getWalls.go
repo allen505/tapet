@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 	"net/http"
 
 	// "net/url"
 	"os"
 	"os/user"
+	"github.com/rubenfonseca/fastimage"
 
 	// "encoding/json"
 	"github.com/akamensky/argparse"
@@ -126,6 +128,45 @@ func getPosts(subreddit, topRange, after string, loop int) {
 	}
 }
 
+func isImg(URL string) bool{
+	if strings.HasSuffix(URL, ".png") || strings.HasSuffix(URL, ".jpeg") || strings.HasSuffix(URL, ".jpg"){
+		return true
+	}
+	return false
+}
+
+func isHD(URL string) bool {
+	_,size,err := fastimage.DetectImageType(URL)
+	if(err!=nil){
+		print(err)
+		return false
+	}
+
+	width := int(size.Width)
+	height := int(size.Height)
+
+	if(height>=minHeight && width>=minWidth){
+		return true
+	}
+	return false
+}
+
+func isLandscape(URL string) bool{
+	_,size,err := fastimage.DetectImageType(URL)
+	if(err!=nil){
+		print(err)
+		return false
+	}
+
+	width := int(size.Width)
+	height := int(size.Height)
+
+	if(width>height){
+		return true
+	}
+	return false
+}
+
 func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
@@ -140,5 +181,4 @@ func main() {
 	fmt.Println("Selected Range = ", *topRange)
 
 	getPosts(subreddit, *topRange, "", loops)
-
 }

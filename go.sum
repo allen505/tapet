@@ -1,2 +1,4 @@
 github.com/akamensky/argparse v1.2.1 h1:YMYF1VMku+dnz7TVTJpYhsCXHSYCVMAIcKaBbjwbvZo=
 github.com/akamensky/argparse v1.2.1/go.mod h1:S5kwC7IuDcEr5VeXtGPRVZ5o/FdhcMlQz4IZQuw64xA=
+github.com/rubenfonseca/fastimage v0.0.0-20170112075114-7e006a27a95b h1:F8SRXk6Ahld/UDZqhM5XFNsGRRjMYhpNz5mxe5bjSKI=
+github.com/rubenfonseca/fastimage v0.0.0-20170112075114-7e006a27a95b/go.mod h1:za/FM5/4JjuNHv6y8CdQrGuxtnJP4NBVauNR05i/0HQ=
