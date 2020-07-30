@@ -1,19 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"strings"
 	"net/http"
-
-	// "net/url"
 	"os"
 	"os/user"
-	"github.com/rubenfonseca/fastimage"
+	"strings"
+	"time"
 
-	// "encoding/json"
 	"github.com/akamensky/argparse"
+	"github.com/rubenfonseca/fastimage"
 )
 
 const dir string = "~/Pictures/Wallpapers/"
@@ -23,11 +22,19 @@ const minHeight int = 1080
 const postsPerRequest int = 20
 const loops int = 5
 
-type foo struct {
-	Bar string
+type jsonStruct struct {
+	values string
 }
 
-var client *http.Client = &http.Client{}
+type postStruct struct {
+	name      string
+	picURL    string
+	redditURL string
+	author    string
+	nsfw      bool
+}
+
+var client *http.Client = &http.Client{Timeout: 10 * time.Second}
 
 func validURL(URL string) bool {
 	resp, err := http.Get(URL)
@@ -69,75 +76,83 @@ func makeHTTPReq(URL string) *http.Response {
 	if resp.StatusCode == 200 {
 		return resp
 	}
-	log.Fatalln(err)
+
+	log.Fatalln("Failed to get HTTP Respone from URL = ", URL, "\n", resp)
 	return resp
 }
 
 func verifySubreddit(subreddit string) bool {
 	URL := "https://reddit.com/r/" + subreddit
+	resp := makeHTTPReq(URL)
 
-	req, err := http.NewRequest("GET", URL, nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	req.Header.Set("User-Agent", "Go_Wallpaper_Downloader")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	if resp.StatusCode == 200 {
+	if resp.StatusCode == http.StatusOK {
 		return true
 	}
 	return false
+
 }
 
-func getJSON(URL string, target interface{}) {
+func getJSON(URL string, target interface{}) []interface{} {
 	// var val = new(Foo)
 	// client := &http.Client{}
 
-	req, _ := http.NewRequest("GET", URL, nil)
-	req.Header.Set("User-Agent", "wallpaperDownloader")
-	resp, httpErr := client.Do(req)
+	resp := makeHTTPReq(URL)
 
-	if httpErr != nil {
-		fmt.Println("HTTP Error = ", httpErr)
-		log.Fatal(httpErr)
-	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		bodyString := string(bodyBytes)
-		fmt.Println("Body = ", bodyString)
+	bodyInBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
 	}
+	var result map[string]interface{}
+
+	json.Unmarshal([]byte(bodyInBytes), &result)
+	posts := result["data"].(map[string]interface{})["children"]
+
+	return posts.([]interface{})
 
 }
 
-func getPosts(subreddit, topRange, after string, loop int) {
-	for i := 0; i < 1; i++ {
-		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%s&after=%s", subreddit, topRange, postsPerRequest, after)
-		// var URL string = "http://example.com/"
-		foo1 := new(foo) // or &Foo{}
-		getJSON(URL, foo1)
-		println(foo1.Bar)
+func extractPostsData(postsJSON []interface{}, posts *[]postStruct) {
+	var postJSONData interface{}
+	var postData postStruct
+
+	for _, v := range postsJSON {
+		postJSONData = (v.(map[string]interface{})["data"])
+
+		postData.name = postJSONData.(map[string]interface{})["title"].(string)
+		postData.picURL = postJSONData.(map[string]interface{})["url"].(string)
+		postData.redditURL = postJSONData.(map[string]interface{})["permalink"].(string)
+		postData.author = postJSONData.(map[string]interface{})["author"].(string)
+		postData.nsfw = postJSONData.(map[string]interface{})["over_18"].(bool)
+
+		*posts = append(*posts, postData)
 	}
 }
 
-func isImg(URL string) bool{
-	if strings.HasSuffix(URL, ".png") || strings.HasSuffix(URL, ".jpeg") || strings.HasSuffix(URL, ".jpg"){
+func getPosts(subreddit, topRange, after string, loops int) []postStruct {
+	var posts []postStruct = make([]postStruct, 0)
+
+	for i := 0; i < loops; i++ {
+		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%d&after=%s", subreddit, topRange, postsPerRequest, after)
+		httpResp := new(jsonStruct)
+		var postsJSON []interface{} = getJSON(URL, httpResp)
+		extractPostsData(postsJSON, &posts)
+	}
+
+	return posts
+}
+
+func isImg(URL string) bool {
+	if strings.HasSuffix(URL, ".png") || strings.HasSuffix(URL, ".jpeg") || strings.HasSuffix(URL, ".jpg") {
 		return true
 	}
 	return false
 }
 
 func isHD(URL string) bool {
-	_,size,err := fastimage.DetectImageType(URL)
-	if(err!=nil){
+	_, size, err := fastimage.DetectImageType(URL)
+	if err != nil {
 		print(err)
 		return false
 	}
@@ -145,15 +160,15 @@ func isHD(URL string) bool {
 	width := int(size.Width)
 	height := int(size.Height)
 
-	if(height>=minHeight && width>=minWidth){
+	if height >= minHeight && width >= minWidth {
 		return true
 	}
 	return false
 }
 
-func isLandscape(URL string) bool{
-	_,size,err := fastimage.DetectImageType(URL)
-	if(err!=nil){
+func isLandscape(URL string) bool {
+	_, size, err := fastimage.DetectImageType(URL)
+	if err != nil {
 		print(err)
 		return false
 	}
@@ -161,7 +176,7 @@ func isLandscape(URL string) bool{
 	width := int(size.Width)
 	height := int(size.Height)
 
-	if(width>height){
+	if width > height {
 		return true
 	}
 	return false
@@ -171,14 +186,16 @@ func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
-	err := parser.Parse(os.Args)
+	var posts []postStruct
 
+	err := parser.Parse(os.Args)
 	if err != nil {
 		fmt.Print(parser.Usage(err))
 		os.Exit(1)
 	}
 
-	fmt.Println("Selected Range = ", *topRange)
+	// fmt.Println("Selected Range = ", *topRange)
+	posts = getPosts(subreddit, *topRange, "", loops)
+	fmt.Println("Number of posts receiveced = ", len(posts), " and capacity = ", cap(posts))
 
-	getPosts(subreddit, *topRange, "", loops)
 }
