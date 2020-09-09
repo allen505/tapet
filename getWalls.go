@@ -4,18 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/user"
 	"strings"
 	"time"
+	"net/url"
 
 	"github.com/akamensky/argparse"
 	"github.com/rubenfonseca/fastimage"
 )
 
-const dir string = "~/Pictures/Wallpapers/"
+const dir string = "/Pictures/Wallpapers/"
 const subreddit string = "wallpapers"
 const minWidth int = 1920
 const minHeight int = 1080
@@ -182,6 +184,53 @@ func isLandscape(URL string) bool {
 	return false
 }
 
+func alreadyDownloaded(URL string) bool {
+
+	s,_ := url.Parse(URL)
+	usr, _ := user.Current()
+	imgName := s.Path[1:]
+	imgDirectory := usr.HomeDir + dir + imgName
+
+	_, e := os.Stat(imgDirectory) 
+    if e != nil { 
+        if os.IsNotExist(e) { 
+			return false
+        } 
+    } 
+	return true
+}
+
+func knownURL(post string) bool{
+
+	if((strings.HasPrefix(strings.ToLower(post),"https://i.redd.it/"))||(strings.HasPrefix(strings.ToLower(post),"http://i.imgur.com/"))){
+		return true
+	}
+	return false
+}
+
+func storeImg(post string) bool {
+	resp, _ := http.Get(post)
+	defer resp.Body.Close()
+
+	s,_ := url.Parse(post)
+	usr, _ := user.Current()
+	directory := usr.HomeDir + dir + s.Path[1:]
+	println(directory)
+
+	file, err := os.Create(directory)
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+	defer file.Close()
+
+	_ , err = io.Copy(file, resp.Body)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
@@ -197,5 +246,4 @@ func main() {
 	// fmt.Println("Selected Range = ", *topRange)
 	posts = getPosts(subreddit, *topRange, "", loops)
 	fmt.Println("Number of posts receiveced = ", len(posts), " and capacity = ", cap(posts))
-
 }
