@@ -24,6 +24,12 @@ const minHeight int = 1080
 const postsPerRequest int = 20
 const loops int = 5
 
+var DARK = "\033[30m"
+var RED = "\033[31m"
+var GREEN = "\033[32m"
+var ORANGE = "\033[33m"
+var PURPLE = "\033[35m"
+
 type jsonStruct struct {
 	values string
 }
@@ -219,7 +225,6 @@ func storeImg(post string) bool {
 
 	file, err := os.Create(directory)
 	if err != nil {
-		log.Fatal(err)
 		return false
 	}
 	defer file.Close()
