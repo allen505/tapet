@@ -3,32 +3,31 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/user"
 	"strings"
 	"time"
-	"net/url"
 
 	"github.com/akamensky/argparse"
 	"github.com/rubenfonseca/fastimage"
 )
 
 const dir string = "/Pictures/Wallpapers/"
-const subreddit string = "wallpapers"
 const minWidth int = 1920
 const minHeight int = 1080
 const postsPerRequest int = 20
 const loops int = 5
 
-var DARK = "\033[30m"
-var RED = "\033[31m"
-var GREEN = "\033[32m"
-var ORANGE = "\033[33m"
-var PURPLE = "\033[35m"
+const DARK = "\033[30m"
+const RED = "\033[31m"
+const GREEN = "\033[32m"
+const ORANGE = "\033[33m"
+const PURPLE = "\033[35m"
 
 type jsonStruct struct {
 	values string
@@ -85,7 +84,7 @@ func makeHTTPReq(URL string) *http.Response {
 		return resp
 	}
 
-	log.Fatalln("Failed to get HTTP Respone from URL = ", URL, "\n", resp)
+	log.Println("Failed to get HTTP Respone from URL = ", URL)
 	return resp
 }
 
@@ -192,23 +191,23 @@ func isLandscape(URL string) bool {
 
 func alreadyDownloaded(URL string) bool {
 
-	s,_ := url.Parse(URL)
+	s, _ := url.Parse(URL)
 	usr, _ := user.Current()
 	imgName := s.Path[1:]
 	imgDirectory := usr.HomeDir + dir + imgName
 
-	_, e := os.Stat(imgDirectory) 
-    if e != nil { 
-        if os.IsNotExist(e) { 
+	_, e := os.Stat(imgDirectory)
+	if e != nil {
+		if os.IsNotExist(e) {
 			return false
-        } 
-    } 
+		}
+	}
 	return true
 }
 
-func knownURL(post string) bool{
+func knownURL(post string) bool {
 
-	if((strings.HasPrefix(strings.ToLower(post),"https://i.redd.it/"))||(strings.HasPrefix(strings.ToLower(post),"http://i.imgur.com/"))){
+	if (strings.HasPrefix(strings.ToLower(post), "https://i.redd.it/")) || (strings.HasPrefix(strings.ToLower(post), "http://i.imgur.com/")) {
 		return true
 	}
 	return false
@@ -218,7 +217,7 @@ func storeImg(post string) bool {
 	resp, _ := http.Get(post)
 	defer resp.Body.Close()
 
-	s,_ := url.Parse(post)
+	s, _ := url.Parse(post)
 	usr, _ := user.Current()
 	directory := usr.HomeDir + dir + s.Path[1:]
 	println(directory)
@@ -229,7 +228,7 @@ func storeImg(post string) bool {
 	}
 	defer file.Close()
 
-	_ , err = io.Copy(file, resp.Body)
+	_, err = io.Copy(file, resp.Body)
 	if err != nil {
 		return false
 	}
@@ -240,6 +239,7 @@ func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
+	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
 	var posts []postStruct
 
 	err := parser.Parse(os.Args)
@@ -248,7 +248,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	// fmt.Println("Selected Range = ", *topRange)
-	posts = getPosts(subreddit, *topRange, "", loops)
+	// verify subreddit
+	if !verifySubreddit(*subredditName) {
+		log.Fatalln("Failed to verify subreddit")
+	}
+
+	// Create directory and keep stuff ready
+
+	// Fetch details of all the posts
+	posts = getPosts(*subredditName, *topRange, "", loops)
 	fmt.Println("Number of posts receiveced = ", len(posts), " and capacity = ", cap(posts))
+
+	// Start downloading the photos and store it
+	// Print the progress with relevant details on the Console
+
+	// Final stats(OPTIONAL)
 }
