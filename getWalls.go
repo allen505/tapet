@@ -34,11 +34,12 @@ type jsonStruct struct {
 }
 
 type postStruct struct {
-	name      string
-	picURL    string
-	redditURL string
-	author    string
-	nsfw      bool
+	name   string
+	picURL string
+	author string
+	height float64
+	width  float64
+	nsfw   bool
 }
 
 var client *http.Client = &http.Client{Timeout: 10 * time.Second}
@@ -88,8 +89,8 @@ func makeHTTPReq(URL string) *http.Response {
 	return resp
 }
 
-func verifySubreddit(subreddit string) bool {
-	URL := "https://reddit.com/r/" + subreddit
+func verifySubreddit(subredditName string) bool {
+	URL := "https://reddit.com/r/" + subredditName
 	resp := makeHTTPReq(URL)
 
 	if resp.StatusCode == http.StatusOK {
@@ -99,7 +100,7 @@ func verifySubreddit(subreddit string) bool {
 
 }
 
-func getJSON(URL string, target interface{}) []interface{} {
+func getJSON(URL string, target interface{}) ([]interface{}, string) {
 	// var val = new(Foo)
 	// client := &http.Client{}
 
@@ -115,8 +116,9 @@ func getJSON(URL string, target interface{}) []interface{} {
 
 	json.Unmarshal([]byte(bodyInBytes), &result)
 	posts := result["data"].(map[string]interface{})["children"]
+	after := result["data"].(map[string]interface{})["after"].(string)
 
-	return posts.([]interface{})
+	return posts.([]interface{}), after
 
 }
 
@@ -129,21 +131,30 @@ func extractPostsData(postsJSON []interface{}, posts *[]postStruct) {
 
 		postData.name = postJSONData.(map[string]interface{})["title"].(string)
 		postData.picURL = postJSONData.(map[string]interface{})["url"].(string)
-		postData.redditURL = postJSONData.(map[string]interface{})["permalink"].(string)
 		postData.author = postJSONData.(map[string]interface{})["author"].(string)
 		postData.nsfw = postJSONData.(map[string]interface{})["over_18"].(bool)
+
+		if (postJSONData.(map[string]interface{})["preview"]) != nil {
+			postData.height = (((postJSONData.(map[string]interface{})["preview"]).(map[string]interface{})["images"].([]interface{}))[0].(map[string]interface{})["source"]).(map[string]interface{})["height"].(float64)
+			postData.width = (((postJSONData.(map[string]interface{})["preview"]).(map[string]interface{})["images"].([]interface{}))[0].(map[string]interface{})["source"]).(map[string]interface{})["width"].(float64)
+		} else {
+			postData.height = -1
+			postData.width = -1
+		}
 
 		*posts = append(*posts, postData)
 	}
 }
 
-func getPosts(subreddit, topRange, after string, loops int) []postStruct {
+func getPosts(subredditName string, topRange string, postsPerRequest int, loops int) []postStruct {
 	var posts []postStruct = make([]postStruct, 0)
+	var after string = ""
 
 	for i := 0; i < loops; i++ {
-		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%d&after=%s", subreddit, topRange, postsPerRequest, after)
+		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%d&after=%s", subredditName, topRange, postsPerRequest, after)
 		httpResp := new(jsonStruct)
-		var postsJSON []interface{} = getJSON(URL, httpResp)
+		var postsJSON []interface{}
+		postsJSON, after = getJSON(URL, httpResp)
 		extractPostsData(postsJSON, &posts)
 	}
 
@@ -256,8 +267,8 @@ func main() {
 	// Create directory and keep stuff ready
 
 	// Fetch details of all the posts
-	posts = getPosts(*subredditName, *topRange, "", loops)
-	fmt.Println("Number of posts receiveced = ", len(posts), " and capacity = ", cap(posts))
+	posts = getPosts(*subredditName, *topRange, postsPerRequest, loops)
+	fmt.Println("Number of posts receiveced = ", len(posts))
 
 	// Start downloading the photos and store it
 	// Print the progress with relevant details on the Console
