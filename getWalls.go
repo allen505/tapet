@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/akamensky/argparse"
@@ -24,11 +25,12 @@ const minHeight int = 1080
 const postsPerRequest int = 20
 const loops int = 5
 
-const DARK = "\033[30m"
-const RED = "\033[31m"
-const GREEN = "\033[32m"
-const ORANGE = "\033[33m"
-const PURPLE = "\033[35m"
+const printDARK = "\033[30m"
+const printRED = "\033[31m"
+const printGREEN = "\033[32m"
+const printYELLOW = "\033[33m"
+const printPURPLE = "\033[35m"
+const printRESET = "\033[0m"
 
 type jsonStruct struct {
 	values string
@@ -44,20 +46,6 @@ type postStruct struct {
 }
 
 var client *http.Client = &http.Client{Timeout: 10 * time.Second}
-
-func validURL(URL string) bool {
-	resp, err := http.Get(URL)
-	if err != nil {
-		log.Fatal(err)
-		return false
-	}
-
-	if resp.StatusCode == 404 {
-		return false
-	}
-
-	return true
-}
 
 func prepareDirectory(directory string) bool {
 	usr, _ := user.Current()
@@ -120,6 +108,20 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 
 	return posts.([]interface{}), after
 
+}
+
+func validURL(URL string) bool {
+	resp, err := http.Get(URL)
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+
+	if resp.StatusCode == 404 {
+		return false
+	}
+
+	return true
 }
 
 func isImg(URL string) bool {
@@ -186,7 +188,10 @@ func knownURL(post string) bool {
 }
 
 func storeImg(post string) bool {
-	resp, _ := http.Get(post)
+	resp, err := http.Get(post)
+	if err != nil {
+		return false
+	}
 	defer resp.Body.Close()
 
 	s, _ := url.Parse(post)
@@ -246,52 +251,55 @@ func getPosts(subredditName string, topRange string, postsPerRequest int, loops 
 	return posts
 }
 
-func downloadAndSave(posts []postStruct, fromIndex int, toIndex int) {
+func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines *sync.WaitGroup) {
 	for i := fromIndex; i < toIndex; i++ {
-
 		if !validURL(posts[i].picURL) {
-			log.Println("Skipping Invalid URL")
+			fmt.Println("Skipping Invalid URL")
 			continue
 		}
 		if !knownURL(posts[i].picURL) {
-			log.Println("Skipping Unknown URL")
+			fmt.Println("Skipping Unknown URL")
 			continue
 		}
 		if !isImg(posts[i].picURL) {
-			log.Println("Skipping non-Image URL")
+			fmt.Println("Skipping non-Image URL")
 			continue
 		}
 		if !isLandscape(posts[i].picURL) {
-			log.Println("Skipping Portrait image")
+			fmt.Println("Skipping Portrait image")
 			continue
 		}
 		if !isHD(posts[i].picURL) {
-			log.Println("Skipping low resolution image")
+			fmt.Println("Skipping low resolution image")
 			continue
 		}
 		if !alreadyDownloaded(posts[i].picURL) {
-			log.Println("Skipping already downloaded image")
+			fmt.Println("Skipping already downloaded image",)
 			continue
 		}
 
 		if storeImg(posts[i].picURL) {
-			log.Println("Downloaded ", posts[i].name, " by ", posts[i].author)
+			fmt.Println("Downloaded ", posts[i].name, " by ", posts[i].author)
 		} else {
-			log.Println("FAILED to download", posts[i].name, " by ", posts[i].author)
+			fmt.Println("FAILED to download", posts[i].name, " by ", posts[i].author)
 		}
 	}
+	subRoutines.Done()
 }
 
 func parallelizeDownload(posts []postStruct, numberOfThreads int) {
 	numberOfPosts := len(posts)
 	postsPerThread := numberOfPosts / numberOfThreads
 
+	var subRoutines sync.WaitGroup
+
 	for i := 0; i < numberOfThreads-1; i++ {
-		// fmt.Println(i*postsPerThread, " to ", ((i + 1) * postsPerThread))
-		downloadAndSave(posts, i*postsPerThread, (i+1)*postsPerThread)
+		subRoutines.Add(1)
+		go downloadAndSave(posts, i*postsPerThread, (i+1)*postsPerThread, &subRoutines)
 	}
-	// fmt.Println((numberOfThreads-1)*postsPerThread, " to ", numberOfPosts-1)
-	downloadAndSave(posts, (numberOfThreads-1)*postsPerThread, numberOfPosts)
+	go downloadAndSave(posts, (numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
+
+	subRoutines.Wait()
 }
 
 func main() {
