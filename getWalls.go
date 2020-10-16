@@ -111,11 +111,7 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 }
 
 func validURL(URL string) bool {
-	resp, err := http.Get(URL)
-	if err != nil {
-		log.Fatal(err)
-		return false
-	}
+	resp := makeHTTPReq(URL)
 
 	if resp.StatusCode == 404 {
 		return false
@@ -187,14 +183,12 @@ func knownURL(post string) bool {
 	return false
 }
 
-func storeImg(post string) bool {
-	resp, err := http.Get(post)
-	if err != nil {
-		return false
-	}
+func storeImg(imgURL string) bool {
+	resp := makeHTTPReq(imgURL)
+	
 	defer resp.Body.Close()
 
-	s, _ := url.Parse(post)
+	s, _ := url.Parse(imgURL)
 	usr, _ := user.Current()
 	directory := usr.HomeDir + dir + s.Path[1:]
 	println(directory)
