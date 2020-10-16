@@ -18,19 +18,23 @@ import (
 	"github.com/rubenfonseca/fastimage"
 )
 
-// const dir string = "~/Pictures/Wallpapers/"
-const dir string = "./Wallpapers/"
-const minWidth int = 1920
-const minHeight int = 1080
-const postsPerRequest int = 20
-const loops int = 5
+const (
+	// dir             string = "~/Pictures/Wallpapers/"
+	dir             string = "./Wallpapers/"
+	minWidth        int    = 1920
+	minHeight       int    = 1080
+	postsPerRequest int    = 20
+	loops           int    = 5
+)
 
-const printDARK = "\033[30m"
-const printRED = "\033[31m"
-const printGREEN = "\033[32m"
-const printYELLOW = "\033[33m"
-const printPURPLE = "\033[35m"
-const printRESET = "\033[0m"
+const (
+	printDARK   = "\033[30m"
+	printRED    = "\033[31m"
+	printGREEN  = "\033[32m"
+	printYELLOW = "\033[33m"
+	printPURPLE = "\033[35m"
+	printRESET  = "\033[0m"
+)
 
 type jsonStruct struct {
 	values string
@@ -47,45 +51,36 @@ type postStruct struct {
 
 var client *http.Client = &http.Client{Timeout: 10 * time.Second}
 
-func prepareDirectory(directory string) bool {
-	usr, _ := user.Current()
-	directory = usr.HomeDir + directory
-	err := os.MkdirAll(directory, os.ModePerm)
-	if err != nil {
-		return false
-	}
-	return true
+func prettyPrintSuccess(text string) {
+	fmt.Println(printGREEN, text, printRESET)
+}
+
+func prettyPrintDanger(text string) {
+	log.Fatalln(printRED, text, printRESET)
+}
+
+func prettyPrintWarning(text string) {
+	fmt.Println(printPURPLE, text, printRESET)
 }
 
 func makeHTTPReq(URL string) *http.Response {
 	req, err := http.NewRequest("GET", URL, nil)
 	if err != nil {
-		log.Fatalln(err)
+		prettyPrintDanger(err.Error())
 	}
 
 	req.Header.Set("User-Agent", "Go_Wallpaper_Downloader")
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		prettyPrintDanger(err.Error())
 	}
 
 	if resp.StatusCode == 200 {
 		return resp
 	}
 
-	log.Println("Failed to get HTTP Respone from URL = ", URL)
+	prettyPrintDanger("Failed to get HTTP Respone from URL = " + URL)
 	return resp
-}
-
-func verifySubreddit(subredditName string) bool {
-	URL := "https://reddit.com/r/" + subredditName
-	resp := makeHTTPReq(URL)
-
-	if resp.StatusCode == http.StatusOK {
-		return true
-	}
-	return false
-
 }
 
 func getJSON(URL string, target interface{}) ([]interface{}, string) {
@@ -98,7 +93,7 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 
 	bodyInBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		prettyPrintDanger(err.Error())
 	}
 	var result map[string]interface{}
 
@@ -107,6 +102,27 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 	after := result["data"].(map[string]interface{})["after"].(string)
 
 	return posts.([]interface{}), after
+
+}
+
+func prepareDirectory(directory string) bool {
+	usr, _ := user.Current()
+	directory = usr.HomeDir + directory
+	err := os.MkdirAll(directory, os.ModePerm)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func verifySubreddit(subredditName string) bool {
+	URL := "https://reddit.com/r/" + subredditName
+	resp := makeHTTPReq(URL)
+
+	if resp.StatusCode == http.StatusOK {
+		return true
+	}
+	return false
 
 }
 
@@ -185,7 +201,7 @@ func knownURL(post string) bool {
 
 func storeImg(imgURL string) bool {
 	resp := makeHTTPReq(imgURL)
-	
+
 	defer resp.Body.Close()
 
 	s, _ := url.Parse(imgURL)
@@ -248,34 +264,34 @@ func getPosts(subredditName string, topRange string, postsPerRequest int, loops 
 func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines *sync.WaitGroup) {
 	for i := fromIndex; i < toIndex; i++ {
 		if !validURL(posts[i].picURL) {
-			fmt.Println("Skipping Invalid URL")
+			prettyPrintWarning("Skipping Invalid URL")
 			continue
 		}
 		if !knownURL(posts[i].picURL) {
-			fmt.Println("Skipping Unknown URL")
+			prettyPrintWarning("Skipping Unknown URL")
 			continue
 		}
 		if !isImg(posts[i].picURL) {
-			fmt.Println("Skipping non-Image URL")
+			prettyPrintWarning("Skipping non-Image URL")
 			continue
 		}
 		if !isLandscape(posts[i].picURL) {
-			fmt.Println("Skipping Portrait image")
+			prettyPrintWarning("Skipping Portrait image")
 			continue
 		}
 		if !isHD(posts[i].picURL) {
-			fmt.Println("Skipping low resolution image")
+			prettyPrintWarning("Skipping low resolution image")
 			continue
 		}
 		if !alreadyDownloaded(posts[i].picURL) {
-			fmt.Println("Skipping already downloaded image",)
+			prettyPrintWarning("Skipping already downloaded image")
 			continue
 		}
 
 		if storeImg(posts[i].picURL) {
-			fmt.Println("Downloaded ", posts[i].name, " by ", posts[i].author)
+			fmt.Println(printGREEN, "Downloaded ", printRESET, printPURPLE, posts[i].name, printRESET, " by ", printPURPLE, posts[i].author, printRESET)
 		} else {
-			fmt.Println("FAILED to download", posts[i].name, " by ", posts[i].author)
+			prettyPrintWarning("FAILED to download" + posts[i].name + " by " + posts[i].author)
 		}
 	}
 	subRoutines.Done()
@@ -306,21 +322,21 @@ func main() {
 
 	err := parser.Parse(os.Args)
 	if err != nil {
-		fmt.Print(parser.Usage(err))
+		prettyPrintDanger(parser.Usage(err))
 		os.Exit(1)
 	}
 
 	// verify subreddit
 	if !verifySubreddit(*subredditName) {
-		log.Fatalln("Failed to verify subreddit")
+		prettyPrintDanger("Failed to verify subreddit")
 	}
 
 	// Create directory and keep stuff ready
 
 	// Fetch details of all the posts
-	log.Println("Fetching details of posts")
+	prettyPrintSuccess("Fetching details of posts")
 	posts = getPosts(*subredditName, *topRange, postsPerRequest, loops)
-	log.Println("Fetched details of ", len(posts), " posts")
+	prettyPrintSuccess("Fetched details of " + string(len(posts)) + " posts")
 
 	// Start downloading the photos and store it
 	// Print the progress with relevant details on the Console
