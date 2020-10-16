@@ -17,14 +17,16 @@ import (
 
 	"github.com/akamensky/argparse"
 	"github.com/rubenfonseca/fastimage"
+	"github.com/schollz/progressbar/v3"
 )
 
 const (
-	dir             string = "/Pictures/testFolder/"
+	// Dir is prefixed with ~ later on. Use it as absolute Path from User Home
+	dir             string = "/Pictures/goTest/"
 	minWidth        int    = 1920
 	minHeight       int    = 1080
-	postsPerRequest int    = 20
-	loops           int    = 5
+	postsPerRequest int    = 10
+	loops           int    = 1
 )
 
 const (
@@ -32,7 +34,7 @@ const (
 	printRED    = "\033[31m"
 	printGREEN  = "\033[32m"
 	printYELLOW = "\033[33m"
-	printPURPLE = "\033[35m"
+	printCYAN   = "\033[36m"
 	printRESET  = "\033[0m"
 )
 
@@ -60,7 +62,7 @@ func prettyPrintDanger(text string) {
 }
 
 func prettyPrintWarning(text string) {
-	fmt.Println(printPURPLE, text, printRESET)
+	fmt.Println(printYELLOW, text, printRESET)
 }
 
 func makeHTTPReq(URL string) *http.Response {
@@ -161,8 +163,7 @@ func isHD(URL string) bool {
 
 func isLandscape(URL string) bool {
 	_, size, err := fastimage.DetectImageType(URL)
-	if err != nil {
-		print(err)
+	if err != nil || size == nil {
 		return false
 	}
 
@@ -207,7 +208,6 @@ func storeImg(imgURL string) bool {
 	s, _ := url.Parse(imgURL)
 	usr, _ := user.Current()
 	directory := usr.HomeDir + dir + s.Path[1:]
-	println(directory)
 
 	file, err := os.Create(directory)
 	if err != nil {
@@ -249,6 +249,7 @@ func extractPostsData(postsJSON []interface{}, posts *[]postStruct) {
 func getPosts(subredditName string, topRange string, postsPerRequest int, loops int) []postStruct {
 	var posts []postStruct = make([]postStruct, 0)
 	var after string = ""
+	progressBar := progressbar.Default(int64(postsPerRequest * loops))
 
 	for i := 0; i < loops; i++ {
 		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%d&after=%s", subredditName, topRange, postsPerRequest, after)
@@ -256,6 +257,7 @@ func getPosts(subredditName string, topRange string, postsPerRequest int, loops 
 		var postsJSON []interface{}
 		postsJSON, after = getJSON(URL, httpResp)
 		extractPostsData(postsJSON, &posts)
+		progressBar.Add(len(postsJSON))
 	}
 
 	return posts
@@ -283,15 +285,15 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 			prettyPrintWarning("Skipping low resolution image")
 			continue
 		}
-		if !alreadyDownloaded(posts[i].picURL) {
+		if alreadyDownloaded(posts[i].picURL) {
 			prettyPrintWarning("Skipping already downloaded image")
 			continue
 		}
 
 		if storeImg(posts[i].picURL) {
-			fmt.Println(printGREEN, "Downloaded ", printRESET, printPURPLE, posts[i].name, printRESET, " by ", printPURPLE, posts[i].author, printRESET)
+			fmt.Println(printGREEN, "Downloaded ", printRESET, printCYAN, posts[i].name, printRESET, " by ", printCYAN, posts[i].author, printRESET)
 		} else {
-			prettyPrintWarning("FAILED to download" + posts[i].name + " by " + posts[i].author)
+			prettyPrintWarning("Failed to download " + posts[i].name + " by " + posts[i].author)
 		}
 	}
 	subRoutines.Done()
@@ -307,6 +309,7 @@ func parallelizeDownload(posts []postStruct, numberOfThreads int) {
 		subRoutines.Add(1)
 		go downloadAndSave(posts, i*postsPerThread, (i+1)*postsPerThread, &subRoutines)
 	}
+	subRoutines.Add(1)
 	go downloadAndSave(posts, (numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
 
 	subRoutines.Wait()
@@ -317,7 +320,7 @@ func main() {
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
-	var numberOfThreads *int = parser.Int("n", "number", &argparse.Options{Required: false, Help: "Number of Threads", Default: 2})
+	var numberOfThreads *int = parser.Int("n", "number", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
 	var posts []postStruct
 
 	err := parser.Parse(os.Args)
