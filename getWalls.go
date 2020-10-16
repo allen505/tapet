@@ -17,7 +17,8 @@ import (
 	"github.com/rubenfonseca/fastimage"
 )
 
-const dir string = "/Pictures/Wallpapers/"
+// const dir string = "~/Pictures/Wallpapers/"
+const dir string = "./Wallpapers/"
 const minWidth int = 1920
 const minHeight int = 1080
 const postsPerRequest int = 20
@@ -46,7 +47,6 @@ var client *http.Client = &http.Client{Timeout: 10 * time.Second}
 
 func validURL(URL string) bool {
 	resp, err := http.Get(URL)
-	fmt.Print(resp.Status)
 	if err != nil {
 		log.Fatal(err)
 		return false
@@ -120,45 +120,6 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 
 	return posts.([]interface{}), after
 
-}
-
-func extractPostsData(postsJSON []interface{}, posts *[]postStruct) {
-	var postJSONData interface{}
-	var postData postStruct
-
-	for _, v := range postsJSON {
-		postJSONData = (v.(map[string]interface{})["data"])
-
-		postData.name = postJSONData.(map[string]interface{})["title"].(string)
-		postData.picURL = postJSONData.(map[string]interface{})["url"].(string)
-		postData.author = postJSONData.(map[string]interface{})["author"].(string)
-		postData.nsfw = postJSONData.(map[string]interface{})["over_18"].(bool)
-
-		if (postJSONData.(map[string]interface{})["preview"]) != nil {
-			postData.height = (((postJSONData.(map[string]interface{})["preview"]).(map[string]interface{})["images"].([]interface{}))[0].(map[string]interface{})["source"]).(map[string]interface{})["height"].(float64)
-			postData.width = (((postJSONData.(map[string]interface{})["preview"]).(map[string]interface{})["images"].([]interface{}))[0].(map[string]interface{})["source"]).(map[string]interface{})["width"].(float64)
-		} else {
-			postData.height = -1
-			postData.width = -1
-		}
-
-		*posts = append(*posts, postData)
-	}
-}
-
-func getPosts(subredditName string, topRange string, postsPerRequest int, loops int) []postStruct {
-	var posts []postStruct = make([]postStruct, 0)
-	var after string = ""
-
-	for i := 0; i < loops; i++ {
-		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%d&after=%s", subredditName, topRange, postsPerRequest, after)
-		httpResp := new(jsonStruct)
-		var postsJSON []interface{}
-		postsJSON, after = getJSON(URL, httpResp)
-		extractPostsData(postsJSON, &posts)
-	}
-
-	return posts
 }
 
 func isImg(URL string) bool {
@@ -246,11 +207,99 @@ func storeImg(post string) bool {
 	return true
 }
 
+func extractPostsData(postsJSON []interface{}, posts *[]postStruct) {
+	var postJSONData interface{}
+	var postData postStruct
+
+	for _, v := range postsJSON {
+		postJSONData = (v.(map[string]interface{})["data"])
+
+		postData.name = postJSONData.(map[string]interface{})["title"].(string)
+		postData.picURL = postJSONData.(map[string]interface{})["url"].(string)
+		postData.author = postJSONData.(map[string]interface{})["author"].(string)
+		postData.nsfw = postJSONData.(map[string]interface{})["over_18"].(bool)
+
+		if (postJSONData.(map[string]interface{})["preview"]) != nil {
+			postData.height = (((postJSONData.(map[string]interface{})["preview"]).(map[string]interface{})["images"].([]interface{}))[0].(map[string]interface{})["source"]).(map[string]interface{})["height"].(float64)
+			postData.width = (((postJSONData.(map[string]interface{})["preview"]).(map[string]interface{})["images"].([]interface{}))[0].(map[string]interface{})["source"]).(map[string]interface{})["width"].(float64)
+		} else {
+			postData.height = -1
+			postData.width = -1
+		}
+
+		*posts = append(*posts, postData)
+	}
+}
+
+func getPosts(subredditName string, topRange string, postsPerRequest int, loops int) []postStruct {
+	var posts []postStruct = make([]postStruct, 0)
+	var after string = ""
+
+	for i := 0; i < loops; i++ {
+		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%d&after=%s", subredditName, topRange, postsPerRequest, after)
+		httpResp := new(jsonStruct)
+		var postsJSON []interface{}
+		postsJSON, after = getJSON(URL, httpResp)
+		extractPostsData(postsJSON, &posts)
+	}
+
+	return posts
+}
+
+func downloadAndSave(posts []postStruct, fromIndex int, toIndex int) {
+	for i := fromIndex; i < toIndex; i++ {
+
+		if !validURL(posts[i].picURL) {
+			log.Println("Skipping Invalid URL")
+			continue
+		}
+		if !knownURL(posts[i].picURL) {
+			log.Println("Skipping Unknown URL")
+			continue
+		}
+		if !isImg(posts[i].picURL) {
+			log.Println("Skipping non-Image URL")
+			continue
+		}
+		if !isLandscape(posts[i].picURL) {
+			log.Println("Skipping Portrait image")
+			continue
+		}
+		if !isHD(posts[i].picURL) {
+			log.Println("Skipping low resolution image")
+			continue
+		}
+		if !alreadyDownloaded(posts[i].picURL) {
+			log.Println("Skipping already downloaded image")
+			continue
+		}
+
+		if storeImg(posts[i].picURL) {
+			log.Println("Downloaded ", posts[i].name, " by ", posts[i].author)
+		} else {
+			log.Println("FAILED to download", posts[i].name, " by ", posts[i].author)
+		}
+	}
+}
+
+func parallelizeDownload(posts []postStruct, numberOfThreads int) {
+	numberOfPosts := len(posts)
+	postsPerThread := numberOfPosts / numberOfThreads
+
+	for i := 0; i < numberOfThreads-1; i++ {
+		// fmt.Println(i*postsPerThread, " to ", ((i + 1) * postsPerThread))
+		downloadAndSave(posts, i*postsPerThread, (i+1)*postsPerThread)
+	}
+	// fmt.Println((numberOfThreads-1)*postsPerThread, " to ", numberOfPosts-1)
+	downloadAndSave(posts, (numberOfThreads-1)*postsPerThread, numberOfPosts)
+}
+
 func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
+	var numberOfThreads *int = parser.Int("n", "number", &argparse.Options{Required: false, Help: "Number of Threads", Default: 2})
 	var posts []postStruct
 
 	err := parser.Parse(os.Args)
@@ -267,11 +316,13 @@ func main() {
 	// Create directory and keep stuff ready
 
 	// Fetch details of all the posts
+	log.Println("Fetching details of posts")
 	posts = getPosts(*subredditName, *topRange, postsPerRequest, loops)
-	fmt.Println("Number of posts receiveced = ", len(posts))
+	log.Println("Fetched details of ", len(posts), " posts")
 
 	// Start downloading the photos and store it
 	// Print the progress with relevant details on the Console
+	parallelizeDownload(posts, *numberOfThreads)
 
 	// Final stats(OPTIONAL)
 }
