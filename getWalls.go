@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,8 +20,7 @@ import (
 )
 
 const (
-	// dir             string = "~/Pictures/Wallpapers/"
-	dir             string = "./Wallpapers/"
+	dir             string = "/Pictures/testFolder/"
 	minWidth        int    = 1920
 	minHeight       int    = 1080
 	postsPerRequest int    = 20
@@ -332,11 +332,12 @@ func main() {
 	}
 
 	// Create directory and keep stuff ready
+	prepareDirectory(dir)
 
 	// Fetch details of all the posts
 	prettyPrintSuccess("Fetching details of posts")
 	posts = getPosts(*subredditName, *topRange, postsPerRequest, loops)
-	prettyPrintSuccess("Fetched details of " + string(len(posts)) + " posts")
+	prettyPrintSuccess("Fetched details of " + strconv.Itoa(len(posts)) + " posts")
 
 	// Start downloading the photos and store it
 	// Print the progress with relevant details on the Console
