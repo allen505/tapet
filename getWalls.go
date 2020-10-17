@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	// "sync/atomic"
 	"time"
 
 	"github.com/akamensky/argparse"
@@ -22,14 +23,16 @@ import (
 
 const (
 	// Dir is prefixed with ~ later on. Use it as absolute Path from User Home
-	dir             string = "/Pictures/goTest/"
-	minWidth        int    = 1920
-	minHeight       int    = 1080
-	postsPerRequest int    = 20
-	maxThreads      int    = 8
-	maxNameLength   int    = 40
+	dir             string        = "/Pictures/goTest/"
+	minWidth        int           = 1920
+	minHeight       int           = 1080
+	postsPerRequest int           = 20
+	maxThreads      int           = 8
+	maxNameLength   int           = 40
+	clientTimeout   time.Duration = 30
 )
 
+// Constants required for Pretty Print
 const (
 	printBOLD      string = "\033[1m"
 	printResetBOLD string = "\033[21m"
@@ -55,8 +58,8 @@ type postStruct struct {
 	nsfw   bool
 }
 
-var client *http.Client = &http.Client{Timeout: 30 * time.Second}
-var downloaded = 0
+var client *http.Client = &http.Client{Timeout: clientTimeout * time.Second}
+var downloadCounter uint64 = 0
 
 func prettyPrintSuccess(text string) {
 	fmt.Println(printGREEN, text, printRESET)
@@ -191,7 +194,6 @@ func isImg(URL string) bool {
 func isHD(URL string) bool {
 	_, size, err := fastimage.DetectImageType(URL)
 	if err != nil {
-		print(err)
 		return false
 	}
 
@@ -340,7 +342,8 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 
 		if storeImg(posts[i].picURL) {
 			fmt.Println(printGREEN, "Downloaded ", printCYAN, posts[i].name, printGREEN, " by ", printCYAN, posts[i].author, printRESET)
-			downloaded++
+			// atomic.AddUint64(&downloadCounter, 1)
+			downloadCounter++
 		} else {
 			prettyPrintWarning("Failed to download " + posts[i].name + " by " + posts[i].author)
 		}
@@ -368,14 +371,14 @@ func parallelizeDownload(posts []postStruct, numberOfThreads *int) {
 	go downloadAndSave(posts, (*numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
 
 	subRoutines.Wait()
-	fmt.Println(printGREEN, "\n Downloaded", printCYAN, downloaded, printGREEN, "images successfully.", printRESET)
+	fmt.Println(printGREEN, "\n Downloaded", printCYAN, downloadCounter, printGREEN, "images successfully.", printRESET)
 }
 
 func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
 	var numberOfThreads *int = parser.Int("t", "threads", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
-	var loops *int = parser.Int("l", "loops", &argparse.Options{Required: false, Help: "Number of loops to be performed. Each loop fetches 20 images", Default: 5})
+	var loops *int = parser.Int("l", "loops", &argparse.Options{Required: false, Help: "Number of loops to be performed. Each loop fetches " + strconv.Itoa(postsPerRequest) + " images", Default: 5})
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
 
