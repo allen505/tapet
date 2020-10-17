@@ -52,6 +52,7 @@ type postStruct struct {
 }
 
 var client *http.Client = &http.Client{Timeout: 10 * time.Second}
+var downloaded = 0
 
 func prettyPrintSuccess(text string) {
 	fmt.Println(printGREEN, text, printRESET)
@@ -63,6 +64,10 @@ func prettyPrintDanger(text string) {
 
 func prettyPrintWarning(text string) {
 	fmt.Println(printYELLOW, text, printRESET)
+}
+
+func prettyPrintCreating(text string) {
+	fmt.Println(printCYAN, text , printRESET )
 }
 
 func makeHTTPReq(URL string) *http.Response {
@@ -110,6 +115,14 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 func prepareDirectory(directory string) bool {
 	usr, _ := user.Current()
 	directory = usr.HomeDir + directory
+
+	_, e := os.Stat(directory)
+	if e != nil {
+		if os.IsNotExist(e) {
+			prettyPrintCreating("\nCreating directory "+ directory)
+		}
+	}
+
 	err := os.MkdirAll(directory, os.ModePerm)
 	if err != nil {
 		return false
@@ -292,6 +305,7 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 
 		if storeImg(posts[i].picURL) {
 			fmt.Println(printGREEN, "Downloaded ", printRESET, printCYAN, posts[i].name, printRESET, " by ", printCYAN, posts[i].author, printRESET)
+			downloaded += 1
 		} else {
 			prettyPrintWarning("Failed to download " + posts[i].name + " by " + posts[i].author)
 		}
@@ -313,6 +327,7 @@ func parallelizeDownload(posts []postStruct, numberOfThreads int) {
 	go downloadAndSave(posts, (numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
 
 	subRoutines.Wait()
+	fmt.Println(printGREEN,"\n Downloaded",printCYAN,downloaded,printGREEN,"images successfully.",printRESET)
 }
 
 func main() {
@@ -338,9 +353,9 @@ func main() {
 	prepareDirectory(dir)
 
 	// Fetch details of all the posts
-	prettyPrintSuccess("Fetching details of posts")
+	prettyPrintSuccess("\nFetching details of posts")
 	posts = getPosts(*subredditName, *topRange, postsPerRequest, loops)
-	prettyPrintSuccess("Fetched details of " + strconv.Itoa(len(posts)) + " posts")
+	prettyPrintSuccess("\nFetched details of " + strconv.Itoa(len(posts)) + " posts\n")
 
 	// Start downloading the photos and store it
 	// Print the progress with relevant details on the Console

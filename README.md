@@ -16,8 +16,8 @@ This project is inspired by the wonderful people of Reddit and the [reddit-wallp
 
 | Number of Photos |      Go      |    Python    |
 | :--------------: | :----------: | :----------: |
-|        10        |    16secs    | 2mins 8secs  |
-|       100        | 2mins 29secs | 16min 47secs |
+|        10        |    10secs    |     47 secs  |
+|       100        |    42secs    |  5min 28secs |
 
 - Golang was set to run on 4 threads
 - The benchmarking was NOT scientific by any means. However you are welcome to try both projects and see how Go out performs Python.
