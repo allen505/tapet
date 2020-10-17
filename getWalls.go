@@ -25,8 +25,7 @@ const (
 	dir             string = "/Pictures/goTest/"
 	minWidth        int    = 1920
 	minHeight       int    = 1080
-	postsPerRequest int    = 10
-	loops           int    = 1
+	postsPerRequest int    = 20
 )
 
 const (
@@ -305,7 +304,7 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 
 		if storeImg(posts[i].picURL) {
 			fmt.Println(printGREEN, "Downloaded ", printRESET, printCYAN, posts[i].name, printRESET, " by ", printCYAN, posts[i].author, printRESET)
-			downloaded += 1
+			downloaded++
 		} else {
 			prettyPrintWarning("Failed to download " + posts[i].name + " by " + posts[i].author)
 		}
@@ -333,9 +332,11 @@ func parallelizeDownload(posts []postStruct, numberOfThreads int) {
 func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
+	var numberOfThreads *int = parser.Int("t", "threads", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
+	var loops *int = parser.Int("l", "loops", &argparse.Options{Required: false, Help: "Number of loops to be performed. Each loop fetches 20 images", Default: 5})
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
-	var numberOfThreads *int = parser.Int("n", "number", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
+	
 	var posts []postStruct
 
 	err := parser.Parse(os.Args)
@@ -354,7 +355,7 @@ func main() {
 
 	// Fetch details of all the posts
 	prettyPrintSuccess("\nFetching details of posts")
-	posts = getPosts(*subredditName, *topRange, postsPerRequest, loops)
+	posts = getPosts(*subredditName, *topRange, postsPerRequest, *loops)
 	prettyPrintSuccess("\nFetched details of " + strconv.Itoa(len(posts)) + " posts\n")
 
 	// Start downloading the photos and store it
