@@ -26,15 +26,20 @@ const (
 	minWidth        int    = 1920
 	minHeight       int    = 1080
 	postsPerRequest int    = 20
+	maxThreads      int    = 8
+	maxNameLength   int    = 40
 )
 
 const (
-	printDARK   = "\033[30m"
-	printRED    = "\033[31m"
-	printGREEN  = "\033[32m"
-	printYELLOW = "\033[33m"
-	printCYAN   = "\033[36m"
-	printRESET  = "\033[0m"
+	printBOLD      string = "\033[1m"
+	printResetBOLD string = "\033[21m"
+
+	printRED    string = "\033[31m"
+	printGREEN  string = "\033[32m"
+	printYELLOW string = "\033[33m"
+	printCYAN   string = "\033[36m"
+	printBLUE   string = "\033[34m"
+	printRESET  string = "\033[0m"
 )
 
 type jsonStruct struct {
@@ -50,7 +55,7 @@ type postStruct struct {
 	nsfw   bool
 }
 
-var client *http.Client = &http.Client{Timeout: 10 * time.Second}
+var client *http.Client = &http.Client{Timeout: 30 * time.Second}
 var downloaded = 0
 
 func prettyPrintSuccess(text string) {
@@ -58,7 +63,7 @@ func prettyPrintSuccess(text string) {
 }
 
 func prettyPrintDanger(text string) {
-	log.Fatalln(printRED, text, printRESET)
+	log.Fatalln(text)
 }
 
 func prettyPrintWarning(text string) {
@@ -66,7 +71,33 @@ func prettyPrintWarning(text string) {
 }
 
 func prettyPrintCreating(text string) {
-	fmt.Println(printCYAN, text , printRESET )
+	fmt.Println(printCYAN, text, printRESET)
+}
+
+func printInitialStats(numberOfThreads int, loops int, topRange string, subredditName string) {
+	fmt.Println("──────────────────────────────────────────────────────────")
+	fmt.Println(printBLUE, "Download location:\t", printCYAN, "Sample dir", printRESET)
+	fmt.Println(printBLUE, "Number of threads used:", printCYAN, numberOfThreads, printRESET)
+	fmt.Println(printBLUE, "Subreddit:\t\t", printCYAN, "r/", subredditName, printRESET)
+	fmt.Println(printBLUE, "Range of top posts:\t", printCYAN, topRange, printRESET)
+	fmt.Println(printBLUE, "Max images to download:", printCYAN, (loops * postsPerRequest), printRESET)
+	fmt.Println("──────────────────────────────────────────────────────────")
+}
+
+func trimStr(input string) string {
+	asRunes := []rune(input)
+	var start int = 0
+	var length int = maxNameLength - 3
+
+	if start >= len(asRunes) {
+		return ""
+	}
+
+	if start+maxNameLength > len(asRunes) {
+		length = len(asRunes) - start
+	}
+
+	return string(asRunes[start:start+length]) + "..."
 }
 
 func makeHTTPReq(URL string) *http.Response {
@@ -118,7 +149,7 @@ func prepareDirectory(directory string) bool {
 	_, e := os.Stat(directory)
 	if e != nil {
 		if os.IsNotExist(e) {
-			prettyPrintCreating("\nCreating directory "+ directory)
+			prettyPrintCreating("\nCreating directory " + directory)
 		}
 	}
 
@@ -241,7 +272,12 @@ func extractPostsData(postsJSON []interface{}, posts *[]postStruct) {
 	for _, v := range postsJSON {
 		postJSONData = (v.(map[string]interface{})["data"])
 
-		postData.name = postJSONData.(map[string]interface{})["title"].(string)
+		tmpStr := postJSONData.(map[string]interface{})["title"].(string)
+		if len(tmpStr) > maxNameLength {
+			postData.name = trimStr(tmpStr)
+		} else {
+			postData.name = tmpStr
+		}
 		postData.picURL = postJSONData.(map[string]interface{})["url"].(string)
 		postData.author = postJSONData.(map[string]interface{})["author"].(string)
 		postData.nsfw = postJSONData.(map[string]interface{})["over_18"].(bool)
@@ -303,7 +339,7 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 		}
 
 		if storeImg(posts[i].picURL) {
-			fmt.Println(printGREEN, "Downloaded ", printRESET, printCYAN, posts[i].name, printRESET, " by ", printCYAN, posts[i].author, printRESET)
+			fmt.Println(printGREEN, "Downloaded ", printCYAN, posts[i].name, printGREEN, " by ", printCYAN, posts[i].author, printRESET)
 			downloaded++
 		} else {
 			prettyPrintWarning("Failed to download " + posts[i].name + " by " + posts[i].author)
@@ -312,21 +348,27 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 	subRoutines.Done()
 }
 
-func parallelizeDownload(posts []postStruct, numberOfThreads int) {
+func parallelizeDownload(posts []postStruct, numberOfThreads *int) {
 	numberOfPosts := len(posts)
-	postsPerThread := numberOfPosts / numberOfThreads
+
+	if *numberOfThreads > maxThreads {
+		prettyPrintWarning("To save resources number of Threads is capped at " + strconv.Itoa(maxThreads))
+		*numberOfThreads = maxThreads
+	}
+
+	postsPerThread := numberOfPosts / *numberOfThreads
 
 	var subRoutines sync.WaitGroup
 
-	for i := 0; i < numberOfThreads-1; i++ {
+	for i := 0; i < *numberOfThreads-1; i++ {
 		subRoutines.Add(1)
 		go downloadAndSave(posts, i*postsPerThread, (i+1)*postsPerThread, &subRoutines)
 	}
 	subRoutines.Add(1)
-	go downloadAndSave(posts, (numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
+	go downloadAndSave(posts, (*numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
 
 	subRoutines.Wait()
-	fmt.Println(printGREEN,"\n Downloaded",printCYAN,downloaded,printGREEN,"images successfully.",printRESET)
+	fmt.Println(printGREEN, "\n Downloaded", printCYAN, downloaded, printGREEN, "images successfully.", printRESET)
 }
 
 func main() {
@@ -336,7 +378,7 @@ func main() {
 	var loops *int = parser.Int("l", "loops", &argparse.Options{Required: false, Help: "Number of loops to be performed. Each loop fetches 20 images", Default: 5})
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
-	
+
 	var posts []postStruct
 
 	err := parser.Parse(os.Args)
@@ -354,13 +396,13 @@ func main() {
 	prepareDirectory(dir)
 
 	// Fetch details of all the posts
-	prettyPrintSuccess("\nFetching details of posts")
+	printInitialStats(*numberOfThreads, *loops, *topRange, *subredditName)
 	posts = getPosts(*subredditName, *topRange, postsPerRequest, *loops)
 	prettyPrintSuccess("\nFetched details of " + strconv.Itoa(len(posts)) + " posts\n")
 
 	// Start downloading the photos and store it
 	// Print the progress with relevant details on the Console
-	parallelizeDownload(posts, *numberOfThreads)
+	parallelizeDownload(posts, numberOfThreads)
 
 	// Final stats(OPTIONAL)
 }
