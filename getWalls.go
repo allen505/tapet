@@ -13,10 +13,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
 	// "sync/atomic"
 	"time"
 
 	"github.com/akamensky/argparse"
+	"github.com/gookit/color"
 	"github.com/rubenfonseca/fastimage"
 	"github.com/schollz/progressbar/v3"
 )
@@ -29,20 +31,7 @@ const (
 	postsPerRequest int           = 20
 	maxThreads      int           = 8
 	maxNameLength   int           = 40
-	clientTimeout   time.Duration = 30
-)
-
-// Constants required for Pretty Print
-const (
-	printBOLD      string = "\033[1m"
-	printResetBOLD string = "\033[21m"
-
-	printRED    string = "\033[31m"
-	printGREEN  string = "\033[32m"
-	printYELLOW string = "\033[33m"
-	printCYAN   string = "\033[36m"
-	printBLUE   string = "\033[34m"
-	printRESET  string = "\033[0m"
+	clientTimeout   time.Duration = 45
 )
 
 type jsonStruct struct {
@@ -62,7 +51,7 @@ var client *http.Client = &http.Client{Timeout: clientTimeout * time.Second}
 var downloadCounter uint64 = 0
 
 func prettyPrintSuccess(text string) {
-	fmt.Println(printGREEN, text, printRESET)
+	color.Green.Println(text)
 }
 
 func prettyPrintDanger(text string) {
@@ -70,21 +59,35 @@ func prettyPrintDanger(text string) {
 }
 
 func prettyPrintWarning(text string) {
-	fmt.Println(printYELLOW, text, printRESET)
+	color.Yellow.Println(text)
 }
 
 func prettyPrintCreating(text string) {
-	fmt.Println(printCYAN, text, printRESET)
+	color.Cyan.Println(text)
 }
 
-func printInitialStats(numberOfThreads int, loops int, topRange string, subredditName string) {
-	fmt.Println("──────────────────────────────────────────────────────────")
-	fmt.Println(printBLUE, "Download location:\t", printCYAN, "Sample dir", printRESET)
-	fmt.Println(printBLUE, "Number of threads used:", printCYAN, numberOfThreads, printRESET)
-	fmt.Println(printBLUE, "Subreddit:\t\t", printCYAN, "r/", subredditName, printRESET)
-	fmt.Println(printBLUE, "Range of top posts:\t", printCYAN, topRange, printRESET)
-	fmt.Println(printBLUE, "Max images to download:", printCYAN, (loops * postsPerRequest), printRESET)
-	fmt.Println("──────────────────────────────────────────────────────────")
+func printInitialStats(absolutePath string, numberOfThreads int, loops int, topRange string, subredditName string) {
+	fmt.Println("\n──────────────────────────────────────────────────────────")
+	color.Blue.Print("Download location:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(absolutePath, "\n")
+	color.Blue.Print("Number of threads used:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(numberOfThreads, "\n")
+	color.Blue.Print("Subreddit:\t\t")
+	color.Style{color.FgCyan, color.OpBold}.Print("r/", subredditName, "\n")
+	color.Blue.Print("Range of top posts:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(topRange, "\n")
+	color.Blue.Print("Max images to download:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print((loops * postsPerRequest), "\n")
+	fmt.Println("──────────────────────────────────────────────────────────\n")
+}
+
+func printFinalStats(timeTaken time.Duration) {
+	fmt.Println("\n──────────────────────────────────────────────────────────")
+	color.Blue.Print("Images Downloaded:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(downloadCounter, "\n")
+	color.Blue.Print("Time taken:\t\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(timeTaken.Round(time.Second), "\n")
+	fmt.Println("──────────────────────────────────────────────────────────\n")
 }
 
 func trimStr(input string) string {
@@ -105,8 +108,9 @@ func trimStr(input string) string {
 
 func makeHTTPReq(URL string) *http.Response {
 	req, err := http.NewRequest("GET", URL, nil)
+
 	if err != nil {
-		prettyPrintDanger(err.Error())
+		prettyPrintWarning(err.Error())
 	}
 
 	req.Header.Set("User-Agent", "Go_Wallpaper_Downloader")
@@ -124,9 +128,6 @@ func makeHTTPReq(URL string) *http.Response {
 }
 
 func getJSON(URL string, target interface{}) ([]interface{}, string) {
-	// var val = new(Foo)
-	// client := &http.Client{}
-
 	resp := makeHTTPReq(URL)
 
 	defer resp.Body.Close()
@@ -145,7 +146,7 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 
 }
 
-func prepareDirectory(directory string) bool {
+func prepareDirectory(directory string) string {
 	usr, _ := user.Current()
 	directory = usr.HomeDir + directory
 
@@ -158,9 +159,9 @@ func prepareDirectory(directory string) bool {
 
 	err := os.MkdirAll(directory, os.ModePerm)
 	if err != nil {
-		return false
+		return "FAIL"
 	}
-	return true
+	return directory
 }
 
 func verifySubreddit(subredditName string) bool {
@@ -341,7 +342,10 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 		}
 
 		if storeImg(posts[i].picURL) {
-			fmt.Println(printGREEN, "Downloaded ", printCYAN, posts[i].name, printGREEN, " by ", printCYAN, posts[i].author, printRESET)
+			color.Cyan.Print("Downloaded ")
+			color.Style{color.FgGreen, color.OpBold}.Print(posts[i].name)
+			color.Cyan.Print(" by ")
+			color.Style{color.FgGreen, color.OpBold}.Print(posts[i].author, "\n")
 			// atomic.AddUint64(&downloadCounter, 1)
 			downloadCounter++
 		} else {
@@ -371,7 +375,6 @@ func parallelizeDownload(posts []postStruct, numberOfThreads *int) {
 	go downloadAndSave(posts, (*numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
 
 	subRoutines.Wait()
-	fmt.Println(printGREEN, "\n Downloaded", printCYAN, downloadCounter, printGREEN, "images successfully.", printRESET)
 }
 
 func main() {
@@ -390,22 +393,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	// verify subreddit
+	startingTime := time.Now()
+
 	if !verifySubreddit(*subredditName) {
 		prettyPrintDanger("Failed to verify subreddit")
 	}
 
-	// Create directory and keep stuff ready
-	prepareDirectory(dir)
+	absolutePath := prepareDirectory(dir)
 
-	// Fetch details of all the posts
-	printInitialStats(*numberOfThreads, *loops, *topRange, *subredditName)
+	printInitialStats(absolutePath, *numberOfThreads, *loops, *topRange, *subredditName)
 	posts = getPosts(*subredditName, *topRange, postsPerRequest, *loops)
 	prettyPrintSuccess("\nFetched details of " + strconv.Itoa(len(posts)) + " posts\n")
 
-	// Start downloading the photos and store it
-	// Print the progress with relevant details on the Console
 	parallelizeDownload(posts, numberOfThreads)
 
-	// Final stats(OPTIONAL)
+	timeElapsed := time.Since(startingTime)
+
+	printFinalStats(timeElapsed)
 }
