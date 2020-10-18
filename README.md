@@ -25,45 +25,55 @@ This project is inspired by the wonderful people of [Reddit](https://www.reddit.
 
 ## Speed comparison
 
-| Number of Photos |      Go      |    Python    |
-| :--------------: | :----------: | :----------: |
-|        10        |    10secs    |     47 secs  |
-|       100        |    42secs    |  5min 28secs |
+| Number of Photos |   Go   |   Python    |
+| :--------------: | :----: | :---------: |
+|        10        | 10secs |   47secs    |
+|       100        | 42secs | 5min 28secs |
 
 - Golang was set to run on 4 threads, which is the default
 - The benchmarking was NOT scientific by any means. However you are welcome to try both projects and see how Go out performs Python.
-- The benchmarks were done on same hardware and similar internet conditions
+- The benchmarks were done on same hardware, on Linux and similar internet conditions 
 
 ## Flags or Arguments
 
 Usage:  
-wallpaper-downloader    [-h|--help] [-t|--threads \<integer\>]  
-                        [-r|--range (day|week|month|year|all)]  
-                        [-s|--subreddit "\<value\>"]
+wallpaper-downloader [-h|--help] [-t|--threads \<integer\>]  
+ [-r|--range (day|week|month|year|all)]  
+ [-s|--subreddit "\<value\>"]
 
 Arguments:
+
 ```
-  -h  --help       Print help information  
-  -t  --threads    Number of Threads. Default: 4    
-  -r  --range      Range for top posts. Default: all  
-  -s  --subreddit  Name of Subreddit. Default: wallpaper  
+  -h  --help       Print help information
+  -t  --threads    Number of Threads. Default: 4
+  -r  --range      Range for top posts. Default: all
+  -s  --subreddit  Name of Subreddit. Default: wallpaper
 ```
 
 ## Installation
 
 ### GNU/Linux, Unix or MacOS
+
 1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
 2. Open a terminal and navigate to the downloaded file
 3. Run `./wallpaper-downloader` to run with the default settings
 4. The wallpapers will be download to `~/Pictures/Wallpapers`
 5. Run `./wallpaper-downloader -h` for help menu
+6. (_Optional_) To regularly run _wallpaper-downloader_, use `crontab` while redirecting `stdout` and `stderr` to `/dev/null`. So your the commands would look like this:
+   ```
+   ./wallpaper-downloader any-arguments-here > /dev/null 2>&1
+   ```
+   You can learn more about crontab [here](https://www.geeksforgeeks.org/crontab-in-linux-with-examples/)
 
 ### Windows
+
 1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
-2. 
+2.
 
 ## Customization
-Since the code is open sourced, this project is highly customizable. The following parameters can be modified by editing the lines immediately after the `import()` statements:
+
+Since the code is open sourced _wallpaper-downloader_ is highly customizable. The following parameters can be modified by editing the lines immediately after the `import()` statements in the `getWalls.go` file:
+
 - Destination Folder
 - Minimum Width
 - Minimum Height
