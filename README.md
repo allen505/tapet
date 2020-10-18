@@ -1,5 +1,16 @@
 # Wallpaper downloader
 
+## Table of Contents
+
+  - [Inspiration](#inspiration)
+  - [Advantages of this project](#advantages-of-this-project)
+  - [Speed comparison](#speed-comparison)
+  - [Flags or Arguments](#flags-or-arguments)
+  - [Installation](#installation)
+    - [GNU/Linux, Unix or MacOS](#gnulinux-unix-or-macos)
+    - [Windows](#windows)
+  - [Customization](#customization)
+
 ## Inspiration
 
 This project is inspired by the wonderful people of [Reddit](https://www.reddit.com/) and the [reddit-wallpaper-downloader](https://github.com/mrsorensen/reddit-wallpaper-downloader) project. Though the above mentioned project downloads images from Reddit well, its written in Python which tends to make it slow. This project however is written in [Go lang](https://golang.org/) which is an open source programming language made by Google. This helps programs run at lightning speeds and makes multithreading a breeze.
@@ -37,3 +48,26 @@ Arguments:
   -r  --range      Range for top posts. Default: all  
   -s  --subreddit  Name of Subreddit. Default: wallpaper  
 ```
+
+## Installation
+
+### GNU/Linux, Unix or MacOS
+1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
+2. Open a terminal and navigate to the downloaded file
+3. Run `./wallpaper-downloader` to run with the default settings
+4. The wallpapers will be download to `~/Pictures/Wallpapers`
+5. Run `./wallpaper-downloader -h` for help menu
+
+### Windows
+1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
+2. 
+
+## Customization
+Since the code is open sourced, this project is highly customizable. The following parameters can be modified by editing the lines immediately after the `import()` statements:
+- Destination Folder
+- Minimum Width
+- Minimum Height
+- Client Timeout Duration (in seconds)
+- Posts per Request
+- Cap limit of threads
+- Cap limit of name size

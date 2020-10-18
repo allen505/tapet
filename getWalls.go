@@ -28,10 +28,10 @@ const (
 	dir             string        = "/Pictures/goTest/"
 	minWidth        int           = 1920
 	minHeight       int           = 1080
+	clientTimeout   time.Duration = 45
 	postsPerRequest int           = 20
 	maxThreads      int           = 8
 	maxNameLength   int           = 40
-	clientTimeout   time.Duration = 45
 )
 
 type jsonStruct struct {
