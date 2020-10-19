@@ -355,24 +355,19 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 	subRoutines.Done()
 }
 
-func parallelizeDownload(posts []postStruct, numberOfThreads *int) {
+func parallelizeDownload(posts []postStruct, numberOfThreads int) {
 	numberOfPosts := len(posts)
 
-	if *numberOfThreads > maxThreads {
-		prettyPrintWarning("To save resources number of Threads is capped at " + strconv.Itoa(maxThreads))
-		*numberOfThreads = maxThreads
-	}
-
-	postsPerThread := numberOfPosts / *numberOfThreads
+	postsPerThread := numberOfPosts / numberOfThreads
 
 	var subRoutines sync.WaitGroup
 
-	for i := 0; i < *numberOfThreads-1; i++ {
+	for i := 0; i < numberOfThreads-1; i++ {
 		subRoutines.Add(1)
 		go downloadAndSave(posts, i*postsPerThread, (i+1)*postsPerThread, &subRoutines)
 	}
 	subRoutines.Add(1)
-	go downloadAndSave(posts, (*numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
+	go downloadAndSave(posts, (numberOfThreads-1)*postsPerThread, numberOfPosts, &subRoutines)
 
 	subRoutines.Wait()
 }
@@ -401,11 +396,16 @@ func main() {
 
 	absolutePath := prepareDirectory(dir)
 
+	if *(numberOfThreads) > maxThreads {
+		prettyPrintWarning("To save resources number of Threads is capped at " + strconv.Itoa(maxThreads))
+		*numberOfThreads = maxThreads
+	}
+
 	printInitialStats(absolutePath, *numberOfThreads, *loops, *topRange, *subredditName)
 	posts = getPosts(*subredditName, *topRange, postsPerRequest, *loops)
 	prettyPrintSuccess("\nFetched details of " + strconv.Itoa(len(posts)) + " posts\n")
 
-	parallelizeDownload(posts, numberOfThreads)
+	parallelizeDownload(posts, *numberOfThreads)
 
 	timeElapsed := time.Since(startingTime)
 
