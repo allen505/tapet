@@ -31,6 +31,7 @@ var (
 	postsPerRequest int           = 10
 	maxThreads      int           = 8
 	maxNameLength   int           = 40
+	allowPortrait   bool
 )
 
 type jsonStruct struct {
@@ -70,12 +71,16 @@ func printInitialStats(absolutePath string, numberOfThreads int, numberOfImages 
 	fmt.Println("\n──────────────────────────────────────────────────────────")
 	color.Blue.Print("Download location:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(absolutePath, "\n")
-	color.Blue.Print("Number of threads used:\t")
-	color.Style{color.FgCyan, color.OpBold}.Print(numberOfThreads, "\n")
 	color.Blue.Print("Subreddit:\t\t")
 	color.Style{color.FgCyan, color.OpBold}.Print("r/", subredditName, "\n")
 	color.Blue.Print("Range of top posts:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(topRange, "\n")
+	color.Blue.Print("Number of threads used:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(numberOfThreads, "\n")
+	color.Blue.Print("Minimum resolution:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(minWidth,"x",minHeight, "\n")
+	color.Blue.Print("Allow Portrait images:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(allowPortrait, "\n")
 	color.Blue.Print("Max images to download:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(numberOfImages, "\n")
 	fmt.Print("──────────────────────────────────────────────────────────\n\n")
@@ -330,7 +335,7 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 			prettyPrintWarning("Skipping non-Image URL")
 			continue
 		}
-		if !isLandscape(posts[i].picURL) {
+		if !allowPortrait && !isLandscape(posts[i].picURL) {
 			prettyPrintWarning("Skipping Portrait image")
 			continue
 		}
@@ -376,9 +381,10 @@ func parallelizeDownload(posts []postStruct, numberOfThreads int) {
 	subRoutines.Wait()
 }
 
-func validateParameters(minWidthArg int, minHeightArg int, numberOfThreads *int, numberOfImages *int) {
+func validateParameters(minWidthArg int, minHeightArg int, portrait bool, numberOfThreads *int, numberOfImages *int) {
 	minWidth = minWidthArg
 	minHeight = minHeightArg
+	allowPortrait = portrait
 
 	if *numberOfThreads > maxThreads {
 		prettyPrintWarning("To save resources number of Threads is capped at " + strconv.Itoa(maxThreads))
@@ -400,6 +406,7 @@ func main() {
 	var numberOfThreads *int = parser.Int("t", "threads", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
+	var allowPortraitArg *bool = parser.Flag("p", "portrait", &argparse.Options{Required: false, Help: "Allows portrait images", Default: false})
 	var minWidthArg *int = parser.Int("", "width", &argparse.Options{Required: false, Help: "Minimum Width of images (in pixels)", Default: 1920})
 	var minHeightArg *int = parser.Int("", "height", &argparse.Options{Required: false, Help: "Minimum Height of images (in pixels)", Default: 1080})
 
@@ -420,11 +427,11 @@ func main() {
 	}
 
 	absolutePath := prepareDirectory((*outputDirArg)[0])
-	if absolutePath == "FAIL"{
+	if absolutePath == "FAIL" {
 		prettyPrintDanger("Failed to create directory")
 	}
 
-	validateParameters(*minWidthArg, *minHeightArg, numberOfThreads, numberOfImages)
+	validateParameters(*minWidthArg, *minHeightArg, *allowPortraitArg, numberOfThreads, numberOfImages)
 	printInitialStats(absolutePath, *numberOfThreads, *numberOfImages, *topRange, *subredditName)
 
 	posts = getPosts(*subredditName, *topRange, postsPerRequest, *numberOfImages/postsPerRequest)
