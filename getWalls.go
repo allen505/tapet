@@ -78,7 +78,7 @@ func printInitialStats(absolutePath string, numberOfThreads int, loops int, topR
 	color.Style{color.FgCyan, color.OpBold}.Print(topRange, "\n")
 	color.Blue.Print("Max images to download:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print((loops * postsPerRequest), "\n")
-	fmt.Println("──────────────────────────────────────────────────────────\n")
+	fmt.Print("──────────────────────────────────────────────────────────\n\n")
 }
 
 func printFinalStats(timeTaken time.Duration) {
@@ -87,7 +87,7 @@ func printFinalStats(timeTaken time.Duration) {
 	color.Style{color.FgCyan, color.OpBold}.Print(downloadCounter, "\n")
 	color.Blue.Print("Time taken:\t\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(timeTaken.Round(time.Second), "\n")
-	fmt.Println("──────────────────────────────────────────────────────────\n")
+	fmt.Print("──────────────────────────────────────────────────────────\n\n")
 }
 
 func trimStr(input string) string {

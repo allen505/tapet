@@ -16,7 +16,7 @@ func TestValidURL(t *testing.T) {
 
 func TestPrepareDirectory(t *testing.T) {
 	resp := prepareDirectory("/Pictures/Wallpapers/Reddit")
-	if resp == false {
+	if resp == "FAIL" {
 		t.Errorf("Funtion failed to create directory")
 	}
 }
