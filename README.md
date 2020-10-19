@@ -40,7 +40,7 @@ Usage:
 wallpaper-downloader [-h|--help] [-o|--output "\<value>" [-o|--output \<value>] [-n|--number \<integer>]  
   [-t|--threads \<integer>] [-r|--range  
   (day|week|month|year|all)] [-s|--subreddit  
-  "\<value>"] [--width \<integer>] [--height \<integer>]  
+  "\<value>"] [-p|--portrait] [--width \<integer>] [--height \<integer>]  
 
 Arguments:
 
@@ -52,6 +52,8 @@ Arguments:
 -t  --threads    Number of Threads. Default: 4  
 -r  --range      Range for top posts. Default: all  
 -s  --subreddit  Name of Subreddit. Default: wallpaper  
+-p  --portrait   Allows portrait images. Default: false  
+
     --width      Minimum Width of images (in pixels). Default: 1920  
     --height     Minimum Height of images (in pixels). Default: 1080  
 ```
@@ -62,14 +64,10 @@ Arguments:
 
 1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
 2. Open a terminal and navigate to the downloaded file
-3. Run `./wallpaper-downloader` to run with the default settings
-4. The wallpapers will be download to `~/Pictures/Wallpapers`
-5. Run `./wallpaper-downloader -h` for help menu
-6. (_Optional_) To regularly run _wallpaper-downloader_, use `crontab` while redirecting `stdout` and `stderr` to `/dev/null`. So your the commands would look like this:
-   ```
-   ./wallpaper-downloader any-arguments-here > /dev/null 2>&1
-   ```
-   You can learn more about crontab [here](https://www.geeksforgeeks.org/crontab-in-linux-with-examples/)
+3. Make the file executable by running `chmod u+x wallpaper-downloader-linux-amd64`
+4. Run `./wallpaper-downloader-linux-amd64` to run with the default settings
+5. By default the wallpapers will be download to the directory where the file is present. You can use the `-o` or `--output` argument to specify an Output Directory
+6. Run `./wallpaper-downloader-linux-amd64 -h` for the help menu
 
 ### Windows
 

@@ -68,7 +68,7 @@ func prettyPrintCreating(text string) {
 }
 
 func printInitialStats(absolutePath string, numberOfThreads int, numberOfImages int, topRange string, subredditName string) {
-	fmt.Println("\n──────────────────────────────────────────────────────────")
+	fmt.Println("──────────────────────────────────────────────────────────")
 	color.Blue.Print("Download location:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(absolutePath, "\n")
 	color.Blue.Print("Subreddit:\t\t")
