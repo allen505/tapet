@@ -68,7 +68,10 @@ Arguments:
 ### Windows
 
 1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
-2.
+2. Open a terminal and navigate to the downloaded file
+3. Run `.\wallpaper-downloader.exe` to run with the default settings
+4. The wallpapers will be download to `~\Pictures\Wallpapers`
+5. Run `.\wallpaper-downloader.exe -h` for help menu
 
 ## Customization
 
