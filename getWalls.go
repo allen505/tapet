@@ -54,6 +54,7 @@ func prettyPrintSuccess(text string) {
 }
 
 func prettyPrintDanger(text string) {
+	fmt.Println("FATAL error:")
 	log.Fatalln(text)
 }
 
@@ -109,15 +110,15 @@ func makeHTTPReq(URL string) *http.Response {
 	req, err := http.NewRequest("GET", URL, nil)
 
 	if err != nil {
-		prettyPrintWarning(err.Error())
-	}
-
-	req.Header.Set("User-Agent", "Go_Wallpaper_Downloader")
-	resp, err := client.Do(req)
-	if err != nil {
 		prettyPrintDanger(err.Error())
 	}
+	req.Header.Set("User-Agent", "Go_Wallpaper_Downloader")
+	resp, err := client.Do(req)
 
+	if err != nil {
+		prettyPrintWarning("Couldn't connect to the internet. Please check you internet connection")
+		prettyPrintDanger(err.Error())
+	}
 	if resp.StatusCode == 200 {
 		return resp
 	}
@@ -419,6 +420,9 @@ func main() {
 	}
 
 	absolutePath := prepareDirectory((*outputDirArg)[0])
+	if absolutePath == "FAIL"{
+		prettyPrintDanger("Failed to create directory")
+	}
 
 	validateParameters(*minWidthArg, *minHeightArg, numberOfThreads, numberOfImages)
 	printInitialStats(absolutePath, *numberOfThreads, *numberOfImages, *topRange, *subredditName)
