@@ -9,12 +9,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/user"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
-
-	// "sync/atomic"
 	"time"
 
 	"github.com/akamensky/argparse"
@@ -25,7 +24,7 @@ import (
 
 var (
 	// Dir is prefixed with ~ later on. Use it as absolute Path from User Home
-	dir             string = "/Pictures/goTest/"
+	outputDir       string
 	minWidth        int
 	minHeight       int
 	clientTimeout   time.Duration = 45
@@ -147,18 +146,22 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 }
 
 func prepareDirectory(directory string) string {
-	usr, _ := user.Current()
-	directory = usr.HomeDir + directory
+	directory, e := filepath.Abs(directory)
 
-	_, e := os.Stat(directory)
+	if e != nil {
+		prettyPrintDanger(e.Error())
+	}
+	outputDir = directory
+
+	_, e = os.Stat(directory)
 	if e != nil {
 		if os.IsNotExist(e) {
 			prettyPrintCreating("\nCreating directory " + directory)
 		}
 	}
 
-	err := os.MkdirAll(directory, os.ModePerm)
-	if err != nil {
+	e = os.MkdirAll(directory, os.ModePerm)
+	if e != nil {
 		return "FAIL"
 	}
 	return directory
@@ -225,9 +228,8 @@ func isLandscape(URL string) bool {
 func alreadyDownloaded(URL string) bool {
 
 	s, _ := url.Parse(URL)
-	usr, _ := user.Current()
 	imgName := s.Path[1:]
-	imgDirectory := usr.HomeDir + dir + imgName
+	imgDirectory := path.Join(outputDir, imgName)
 
 	_, e := os.Stat(imgDirectory)
 	if e != nil {
@@ -252,8 +254,7 @@ func storeImg(imgURL string) bool {
 	defer resp.Body.Close()
 
 	s, _ := url.Parse(imgURL)
-	usr, _ := user.Current()
-	directory := usr.HomeDir + dir + s.Path[1:]
+	directory := path.Join(outputDir, s.Path[1:])
 
 	file, err := os.Create(directory)
 	if err != nil {
@@ -342,11 +343,13 @@ func downloadAndSave(posts []postStruct, fromIndex int, toIndex int, subRoutines
 		}
 
 		if storeImg(posts[i].picURL) {
+			fileName, _ := url.Parse(posts[i].picURL)
 			color.Cyan.Print("Downloaded ")
 			color.Style{color.FgGreen, color.OpBold}.Print(posts[i].name)
 			color.Cyan.Print(" by ")
-			color.Style{color.FgGreen, color.OpBold}.Print(posts[i].author, "\n")
-			// atomic.AddUint64(&downloadCounter, 1)
+			color.Style{color.FgGreen, color.OpBold}.Print(posts[i].author)
+			color.Cyan.Print(" as ")
+			color.Green.Print(fileName.Path[1:], "\n")
 			downloadCounter++
 		} else {
 			prettyPrintWarning("Failed to download " + posts[i].name + " by " + posts[i].author)
@@ -390,12 +393,15 @@ func validateParameters(minWidthArg int, minHeightArg int, numberOfThreads *int,
 func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
-	var numberOfThreads *int = parser.Int("t", "threads", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
+
+	var outputDirArg *[]string = parser.StringList("o", "output", &argparse.Options{Required: false, Help: "Output directory path", Default: []string{""}})
 	var numberOfImages *int = parser.Int("n", "number", &argparse.Options{Required: false, Help: "Maximum number of images to be fetched, rounded off to smallest multiple of " + strconv.Itoa(postsPerRequest), Default: 50})
+	var numberOfThreads *int = parser.Int("t", "threads", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
 	var minWidthArg *int = parser.Int("", "width", &argparse.Options{Required: false, Help: "Minimum Width of images (in pixels)", Default: 1920})
 	var minHeightArg *int = parser.Int("", "height", &argparse.Options{Required: false, Help: "Minimum Height of images (in pixels)", Default: 1080})
+
 	var posts []postStruct
 
 	fmt.Println()
@@ -412,7 +418,7 @@ func main() {
 		prettyPrintDanger("Failed to verify subreddit")
 	}
 
-	absolutePath := prepareDirectory(dir)
+	absolutePath := prepareDirectory((*outputDirArg)[0])
 
 	validateParameters(*minWidthArg, *minHeightArg, numberOfThreads, numberOfImages)
 	printInitialStats(absolutePath, *numberOfThreads, *numberOfImages, *topRange, *subredditName)

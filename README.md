@@ -37,17 +37,23 @@ This project is inspired by the wonderful people of [Reddit](https://www.reddit.
 ## Flags or Arguments
 
 Usage:  
-wallpaper-downloader [-h|--help] [-t|--threads \<integer\>]  
- [-r|--range (day|week|month|year|all)]  
- [-s|--subreddit "\<value\>"]
+wallpaper-downloader [-h|--help] [-o|--output "\<value>" [-o|--output \<value>] [-n|--number \<integer>]  
+  [-t|--threads \<integer>] [-r|--range  
+  (day|week|month|year|all)] [-s|--subreddit  
+  "\<value>"] [--width \<integer>] [--height \<integer>]  
 
 Arguments:
 
 ```
-  -h  --help       Print help information
-  -t  --threads    Number of Threads. Default: 4
-  -r  --range      Range for top posts. Default: all
-  -s  --subreddit  Name of Subreddit. Default: wallpaper
+-h  --help       Print help information  
+-o  --output     Output directory path. Default: Present Working Directory(pwd)  
+-n  --number     Maximum number of images to be fetched, rounded off to  
+                 smallest multiple of 10. Default: 50  
+-t  --threads    Number of Threads. Default: 4  
+-r  --range      Range for top posts. Default: all  
+-s  --subreddit  Name of Subreddit. Default: wallpaper  
+    --width      Minimum Width of images (in pixels). Default: 1920  
+    --height     Minimum Height of images (in pixels). Default: 1080  
 ```
 
 ## Installation
