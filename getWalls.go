@@ -23,13 +23,13 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-const (
+var (
 	// Dir is prefixed with ~ later on. Use it as absolute Path from User Home
-	dir             string        = "/Pictures/goTest/"
-	minWidth        int           = 1920
-	minHeight       int           = 1080
+	dir             string = "/Pictures/goTest/"
+	minWidth        int
+	minHeight       int
 	clientTimeout   time.Duration = 45
-	postsPerRequest int           = 20
+	postsPerRequest int           = 10
 	maxThreads      int           = 8
 	maxNameLength   int           = 40
 )
@@ -66,7 +66,7 @@ func prettyPrintCreating(text string) {
 	color.Cyan.Println(text)
 }
 
-func printInitialStats(absolutePath string, numberOfThreads int, loops int, topRange string, subredditName string) {
+func printInitialStats(absolutePath string, numberOfThreads int, numberOfImages int, topRange string, subredditName string) {
 	fmt.Println("\n──────────────────────────────────────────────────────────")
 	color.Blue.Print("Download location:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(absolutePath, "\n")
@@ -77,7 +77,7 @@ func printInitialStats(absolutePath string, numberOfThreads int, loops int, topR
 	color.Blue.Print("Range of top posts:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(topRange, "\n")
 	color.Blue.Print("Max images to download:\t")
-	color.Style{color.FgCyan, color.OpBold}.Print((loops * postsPerRequest), "\n")
+	color.Style{color.FgCyan, color.OpBold}.Print(numberOfImages, "\n")
 	fmt.Print("──────────────────────────────────────────────────────────\n\n")
 }
 
@@ -372,15 +372,33 @@ func parallelizeDownload(posts []postStruct, numberOfThreads int) {
 	subRoutines.Wait()
 }
 
+func validateParameters(minWidthArg int, minHeightArg int, numberOfThreads *int, numberOfImages *int) {
+	minWidth = minWidthArg
+	minHeight = minHeightArg
+
+	if *numberOfThreads > maxThreads {
+		prettyPrintWarning("To save resources number of Threads is capped at " + strconv.Itoa(maxThreads))
+		*numberOfThreads = maxThreads
+	}
+
+	if *numberOfImages%10 != 0 {
+		*numberOfImages = ((*numberOfImages) / postsPerRequest) * postsPerRequest
+		prettyPrintWarning("Rounding off Maximum number of images to " + strconv.Itoa(*numberOfImages))
+	}
+}
+
 func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
 	var numberOfThreads *int = parser.Int("t", "threads", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
-	var loops *int = parser.Int("l", "loops", &argparse.Options{Required: false, Help: "Number of loops to be performed. Each loop fetches " + strconv.Itoa(postsPerRequest) + " images", Default: 5})
+	var numberOfImages *int = parser.Int("n", "number", &argparse.Options{Required: false, Help: "Maximum number of images to be fetched, rounded off to smallest multiple of " + strconv.Itoa(postsPerRequest), Default: 50})
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
-
+	var minWidthArg *int = parser.Int("", "width", &argparse.Options{Required: false, Help: "Minimum Width of images (in pixels)", Default: 1920})
+	var minHeightArg *int = parser.Int("", "height", &argparse.Options{Required: false, Help: "Minimum Height of images (in pixels)", Default: 1080})
 	var posts []postStruct
+
+	fmt.Println()
 
 	err := parser.Parse(os.Args)
 	if err != nil {
@@ -396,13 +414,10 @@ func main() {
 
 	absolutePath := prepareDirectory(dir)
 
-	if *(numberOfThreads) > maxThreads {
-		prettyPrintWarning("To save resources number of Threads is capped at " + strconv.Itoa(maxThreads))
-		*numberOfThreads = maxThreads
-	}
+	validateParameters(*minWidthArg, *minHeightArg, numberOfThreads, numberOfImages)
+	printInitialStats(absolutePath, *numberOfThreads, *numberOfImages, *topRange, *subredditName)
 
-	printInitialStats(absolutePath, *numberOfThreads, *loops, *topRange, *subredditName)
-	posts = getPosts(*subredditName, *topRange, postsPerRequest, *loops)
+	posts = getPosts(*subredditName, *topRange, postsPerRequest, *numberOfImages/postsPerRequest)
 	prettyPrintSuccess("\nFetched details of " + strconv.Itoa(len(posts)) + " posts\n")
 
 	parallelizeDownload(posts, *numberOfThreads)
