@@ -73,9 +73,9 @@ Arguments:
 
 1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
 2. Open a terminal and navigate to the downloaded file
-3. Run `.\wallpaper-downloader.exe` to run with the default settings
-4. The wallpapers will be download to `~\Pictures\Wallpapers`
-5. Run `.\wallpaper-downloader.exe -h` for help menu
+3. Run `.\wallpaper-downloader-windows-amd64.exe` to run with the default settings
+4. By default the wallpapers will be download to the directory where the file is present. You can use the `-o` or `--output` argument to specify an Output Directory
+5. Run `.\wallpaper-downloader-windows-amd64.exe -h` for help menu
 
 ## Customization
 
