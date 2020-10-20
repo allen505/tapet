@@ -67,18 +67,22 @@ func prettyPrintCreating(text string) {
 	color.Cyan.Println(text)
 }
 
-func printInitialStats(absolutePath string, numberOfThreads int, numberOfImages int, topRange string, subredditName string) {
+func printInitialStats(absolutePath string, numberOfThreads int, numberOfImages int, popularity string, topRange string, subredditName string) {
 	fmt.Println("──────────────────────────────────────────────────────────")
 	color.Blue.Print("Download location:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(absolutePath, "\n")
 	color.Blue.Print("Subreddit:\t\t")
 	color.Style{color.FgCyan, color.OpBold}.Print("r/", subredditName, "\n")
-	color.Blue.Print("Range of top posts:\t")
-	color.Style{color.FgCyan, color.OpBold}.Print(topRange, "\n")
+	color.Blue.Print("Popularity of posts:\t")
+	color.Style{color.FgCyan, color.OpBold}.Print(popularity, "\n")
+	if popularity == "top" {
+		color.Blue.Print("Range of top posts:\t")
+		color.Style{color.FgCyan, color.OpBold}.Print(topRange, "\n")
+	}
 	color.Blue.Print("Number of threads used:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(numberOfThreads, "\n")
 	color.Blue.Print("Minimum resolution:\t")
-	color.Style{color.FgCyan, color.OpBold}.Print(minWidth,"x",minHeight, "\n")
+	color.Style{color.FgCyan, color.OpBold}.Print(minWidth, "x", minHeight, "\n")
 	color.Blue.Print("Allow Portrait images:\t")
 	color.Style{color.FgCyan, color.OpBold}.Print(allowPortrait, "\n")
 	color.Blue.Print("Max images to download:\t")
@@ -304,13 +308,13 @@ func extractPostsData(postsJSON []interface{}, posts *[]postStruct) {
 	}
 }
 
-func getPosts(subredditName string, topRange string, postsPerRequest int, loops int) []postStruct {
+func getPosts(subredditName string, popularity string, topRange string, postsPerRequest int, loops int) []postStruct {
 	var posts []postStruct = make([]postStruct, 0)
 	var after string = ""
 	progressBar := progressbar.Default(int64(postsPerRequest * loops))
 
 	for i := 0; i < loops; i++ {
-		var URL string = fmt.Sprintf("https://reddit.com/r/%s/top/.json?t=%s&limit=%d&after=%s", subredditName, topRange, postsPerRequest, after)
+		var URL string = fmt.Sprintf("https://reddit.com/r/%s/%s/.json?t=%s&limit=%d&after=%s", subredditName, popularity, topRange, postsPerRequest, after)
 		httpResp := new(jsonStruct)
 		var postsJSON []interface{}
 		postsJSON, after = getJSON(URL, httpResp)
@@ -401,12 +405,13 @@ func main() {
 
 	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
 
-	var outputDirArg *[]string = parser.StringList("o", "output", &argparse.Options{Required: false, Help: "Output directory path", Default: []string{""}})
+	var outputDirArg *[]string = parser.StringList("o", "output", &argparse.Options{Required: false, Help: "Output directory path", Default: []string{"Wallpapers/"}})
 	var numberOfImages *int = parser.Int("n", "number", &argparse.Options{Required: false, Help: "Maximum number of images to be fetched, rounded off to smallest multiple of " + strconv.Itoa(postsPerRequest), Default: 50})
 	var numberOfThreads *int = parser.Int("t", "threads", &argparse.Options{Required: false, Help: "Number of Threads", Default: 4})
+	var popularity *string = parser.Selector("p", "popularity", []string{"top", "hot", "rising", "new"}, &argparse.Options{Required: false, Help: "Popularity of posts to fetch", Default: "top"})
 	var topRange *string = parser.Selector("r", "range", []string{"day", "week", "month", "year", "all"}, &argparse.Options{Required: false, Help: "Range for top posts", Default: "all"})
 	var subredditName *string = parser.String("s", "subreddit", &argparse.Options{Required: false, Help: "Name of Subreddit", Default: "wallpaper"})
-	var allowPortraitArg *bool = parser.Flag("p", "portrait", &argparse.Options{Required: false, Help: "Allows portrait images", Default: false})
+	var allowPortraitArg *bool = parser.Flag("P", "portrait", &argparse.Options{Required: false, Help: "Turn on to allow portrait images", Default: false})
 	var minWidthArg *int = parser.Int("", "width", &argparse.Options{Required: false, Help: "Minimum Width of images (in pixels)", Default: 1920})
 	var minHeightArg *int = parser.Int("", "height", &argparse.Options{Required: false, Help: "Minimum Height of images (in pixels)", Default: 1080})
 
@@ -432,9 +437,9 @@ func main() {
 	}
 
 	validateParameters(*minWidthArg, *minHeightArg, *allowPortraitArg, numberOfThreads, numberOfImages)
-	printInitialStats(absolutePath, *numberOfThreads, *numberOfImages, *topRange, *subredditName)
+	printInitialStats(absolutePath, *numberOfThreads, *numberOfImages, *popularity, *topRange, *subredditName)
 
-	posts = getPosts(*subredditName, *topRange, postsPerRequest, *numberOfImages/postsPerRequest)
+	posts = getPosts(*subredditName, *popularity, *topRange, postsPerRequest, *numberOfImages/postsPerRequest)
 	prettyPrintSuccess("\nFetched details of " + strconv.Itoa(len(posts)) + " posts\n")
 
 	parallelizeDownload(posts, *numberOfThreads)

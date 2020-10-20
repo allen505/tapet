@@ -3,7 +3,7 @@
 ## Table of Contents
 
   - [Inspiration](#inspiration)
-  - [Advantages of this project](#advantages-of-this-project)
+  - [Advantages](#advantages)
   - [Speed comparison](#speed-comparison)
   - [Flags or Arguments](#flags-or-arguments)
   - [Installation](#installation)
@@ -15,7 +15,7 @@
 
 This project is inspired by the wonderful people of [Reddit](https://www.reddit.com/) and the [reddit-wallpaper-downloader](https://github.com/mrsorensen/reddit-wallpaper-downloader) project. Though the above mentioned project downloads images from Reddit well, its written in Python which tends to make it slow. This project however is written in [Go lang](https://golang.org/) which is an open source programming language made by Google. This helps programs run at lightning speeds and makes multithreading a breeze.
 
-## Advantages of this project
+## Advantages
 
 - Written in Go
 - Lightning speed
@@ -32,30 +32,30 @@ This project is inspired by the wonderful people of [Reddit](https://www.reddit.
 
 - Golang was set to run on 4 threads, which is the default
 - The benchmarking was NOT scientific by any means. However you are welcome to try both projects and see how Go out performs Python.
-- The benchmarks were done on same hardware, on Linux and similar internet conditions 
+- The benchmarks were done on same hardware, on Linux and similar internet conditions
 
 ## Flags or Arguments
 
 Usage:  
 wallpaper-downloader [-h|--help] [-o|--output "\<value>" [-o|--output \<value>] [-n|--number \<integer>]  
-  [-t|--threads \<integer>] [-r|--range  
-  (day|week|month|year|all)] [-s|--subreddit  
-  "\<value>"] [-p|--portrait] [--width \<integer>] [--height \<integer>]  
+ [-t|--threads \<integer>] [-r|--range
+(day|week|month|year|all)] [-s|--subreddit
+"\<value>"] [-p|--portrait] [--width \<integer>] [--height \<integer>]
 
 Arguments:
 
 ```
--h  --help       Print help information  
--o  --output     Output directory path. Default: Present Working Directory(pwd)  
--n  --number     Maximum number of images to be fetched, rounded off to  
-                 smallest multiple of 10. Default: 50  
--t  --threads    Number of Threads. Default: 4  
--r  --range      Range for top posts. Default: all  
--s  --subreddit  Name of Subreddit. Default: wallpaper  
--p  --portrait   Allows portrait images. Default: false  
-
-    --width      Minimum Width of images (in pixels). Default: 1920  
-    --height     Minimum Height of images (in pixels). Default: 1080  
+-h  --help        Print help information
+-o  --output      Output directory path. Default: [Wallpapers/]
+-n  --number      Maximum number of images to be fetched, rounded off to
+                  smallest multiple of 10. Default: 50
+-t  --threads     Number of Threads. Default: 4
+-p  --popularity  Popularity of posts to fetch. Default: top
+-r  --range       Range for top posts. Default: all
+-s  --subreddit   Name of Subreddit. Default: wallpaper
+-P  --portrait    Turn on to allow portrait images. Default: false
+    --width       Minimum Width of images (in pixels). Default: 1920
+    --height      Minimum Height of images (in pixels). Default: 1080
 ```
 
 ## Installation
