@@ -211,7 +211,7 @@ func isImg(URL string) bool {
 
 func isHD(URL string) bool {
 	_, size, err := fastimage.DetectImageType(URL)
-	if err != nil {
+	if err != nil || size == nil {
 		return false
 	}
 
