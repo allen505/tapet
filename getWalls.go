@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"io"
 	"io/ioutil"
 	"log"
@@ -125,8 +126,11 @@ func makeHTTPReq(URL string) *http.Response {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		prettyPrintWarning("Couldn't connect to the internet. Please check you internet connection")
-		prettyPrintDanger(err.Error())
+		_, err := net.Dial("tcp","google.com:80")
+		if err != nil {
+			prettyPrintDanger("Couldn't connect to the internet. Please check you internet connection")
+			// prettyPrintDanger(err.Error())
+		}
 	}
 	if resp.StatusCode == 200 {
 		return resp
