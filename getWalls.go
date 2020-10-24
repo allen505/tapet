@@ -3,10 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"io"
 	"io/ioutil"
-	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,7 +23,6 @@ import (
 )
 
 var (
-	// Dir is prefixed with ~ later on. Use it as absolute Path from User Home
 	outputDir       string
 	minWidth        int
 	minHeight       int
@@ -56,8 +54,9 @@ func prettyPrintSuccess(text string) {
 }
 
 func prettyPrintDanger(text string) {
-	fmt.Println("FATAL error:")
-	log.Fatalln(text)
+	color.Red.Print("\nFatal error: ")
+	fmt.Println(text)
+	os.Exit(1)
 }
 
 func prettyPrintWarning(text string) {
@@ -126,23 +125,26 @@ func makeHTTPReq(URL string) *http.Response {
 	resp, err := client.Do(req)
 
 	if err != nil {
-		_, err := net.Dial("tcp","google.com:80")
-		if err != nil {
+		_, tcpErr := net.Dial("tcp", "google.com:80")
+		if tcpErr != nil {
 			prettyPrintDanger("Couldn't connect to the internet. Please check you internet connection")
-			// prettyPrintDanger(err.Error())
 		}
+		// prettyPrintWarning(err.Error())
+		return nil
 	}
 	if resp.StatusCode == 200 {
 		return resp
 	}
 
-	prettyPrintDanger("Failed to get HTTP Respone from URL = " + URL)
 	return resp
 }
 
 func getJSON(URL string, target interface{}) ([]interface{}, string) {
 	resp := makeHTTPReq(URL)
-
+	
+	if resp == nil{
+		prettyPrintDanger("Couldn't fetch Post details")
+	}
 	defer resp.Body.Close()
 
 	bodyInBytes, err := ioutil.ReadAll(resp.Body)
@@ -150,10 +152,15 @@ func getJSON(URL string, target interface{}) ([]interface{}, string) {
 		prettyPrintDanger(err.Error())
 	}
 	var result map[string]interface{}
+	var after string
 
 	json.Unmarshal([]byte(bodyInBytes), &result)
 	posts := result["data"].(map[string]interface{})["children"]
-	after := result["data"].(map[string]interface{})["after"].(string)
+	if result["data"].(map[string]interface{})["after"] != nil {
+		after = result["data"].(map[string]interface{})["after"].(string)
+	} else {
+		after = ""
+	}
 
 	return posts.([]interface{}), after
 
@@ -185,7 +192,7 @@ func verifySubreddit(subredditName string) bool {
 	URL := "https://reddit.com/r/" + subredditName
 	resp := makeHTTPReq(URL)
 
-	if resp.StatusCode == http.StatusOK {
+	if resp != nil && resp.StatusCode == http.StatusOK {
 		return true
 	}
 	return false
@@ -195,7 +202,7 @@ func verifySubreddit(subredditName string) bool {
 func validURL(URL string) bool {
 	resp := makeHTTPReq(URL)
 
-	if resp.StatusCode == 404 {
+	if resp != nil && resp.StatusCode == 404 {
 		return false
 	}
 
@@ -265,6 +272,10 @@ func knownURL(post string) bool {
 func storeImg(imgURL string) bool {
 	resp := makeHTTPReq(imgURL)
 
+	if resp == nil{
+		return false
+	}
+
 	defer resp.Body.Close()
 
 	s, _ := url.Parse(imgURL)
@@ -324,6 +335,10 @@ func getPosts(subredditName string, popularity string, topRange string, postsPer
 		postsJSON, after = getJSON(URL, httpResp)
 		extractPostsData(postsJSON, &posts)
 		progressBar.Add(len(postsJSON))
+		if after == "" {
+			prettyPrintWarning("\nReached end of all Posts")
+			break
+		}
 	}
 
 	return posts
@@ -402,6 +417,10 @@ func validateParameters(minWidthArg int, minHeightArg int, portrait bool, number
 	if *numberOfImages%10 != 0 {
 		*numberOfImages = ((*numberOfImages) / postsPerRequest) * postsPerRequest
 		prettyPrintWarning("Rounding off Maximum number of images to " + strconv.Itoa(*numberOfImages))
+	}
+
+	if *numberOfImages == 0 {
+		prettyPrintDanger("Entered 0 images. That was quick!")
 	}
 }
 
