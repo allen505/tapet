@@ -1,4 +1,5 @@
-# Wallpaper downloader
+# Tapet
+Tapet is a super fast Reddit wallpaper downloader written in Go. You can follow the [Installation guide](#installation) to set it up in a few minutes.  
 
 ## Table of Contents
 
@@ -37,7 +38,7 @@ This project is inspired by the wonderful people of [Reddit](https://www.reddit.
 ## Flags or Arguments
 
 Usage:  
-wallpaper-downloader [-h|--help] [-o|--output "\<value>" [-o|--output \<value>] [-n|--number \<integer>]  
+Tapet [-h|--help] [-o|--output "\<value>" [-o|--output \<value>] [-n|--number \<integer>]  
  [-t|--threads \<integer>] [-r|--range
 (day|week|month|year|all)] [-s|--subreddit
 "\<value>"] [-p|--portrait] [--width \<integer>] [--height \<integer>]
@@ -63,17 +64,17 @@ Arguments:
 
 ### GNU/Linux, Unix or MacOS
 
-1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
+1. Download the latest release of the software from [here](https://github.com/allen505/Tapet/releases/)
 2. Open a terminal and navigate to the downloaded file
-3. Make the file executable by running `chmod u+x wallpaper-downloader-linux-amd64`
-4. Run `./wallpaper-downloader-linux-amd64` to run with the default settings
+3. Make the file executable by running `chmod u+x Tapet-linux-amd64`
+4. Run `./Tapet-linux-amd64` to run with the default settings
 5. By default the wallpapers will be download to the directory where the file is present. You can use the `-o` or `--output` argument to specify an Output Directory
-6. Run `./wallpaper-downloader-linux-amd64 -h` for the help menu
+6. Run `./Tapet-linux-amd64 -h` for the help menu
 
 ### Windows
 
-1. Download the latest release of the software from [here](https://github.com/allen505/wallpaper-downloader/releases/)
+1. Download the latest release of the software from [here](https://github.com/allen505/Tapet/releases/)
 2. Open a terminal and navigate to the downloaded file
-3. Run `.\wallpaper-downloader-windows-amd64.exe` to run with the default settings
+3. Run `.\Tapet-windows-amd64.exe` to run with the default settings
 4. By default the wallpapers will be download to the directory where the file is present. You can use the `-o` or `--output` argument to specify an Output Directory
-5. Run `.\wallpaper-downloader-windows-amd64.exe -h` for help menu  
+5. Run `.\Tapet-windows-amd64.exe -h` for help menu  

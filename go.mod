@@ -1,4 +1,4 @@
-module github.com/allen505/wallpaper-downloader
+module github.com/allen505/tapet
 
 go 1.14
 

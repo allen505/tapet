@@ -432,7 +432,7 @@ func validateParameters(minWidthArg int, minHeightArg int, portrait bool, number
 
 func main() {
 
-	parser := argparse.NewParser("wallpaper-downloader", "Fetch wallpapers from Reddit")
+	parser := argparse.NewParser("Tapet", "Fetch wallpapers from Reddit")
 
 	var outputDirArg *[]string = parser.StringList("o", "output", &argparse.Options{Required: false, Help: "Output directory path", Default: []string{"Wallpapers/"}})
 	var numberOfImages *int = parser.Int("n", "number", &argparse.Options{Required: false, Help: "Maximum number of images to be fetched, rounded off to smallest multiple of " + strconv.Itoa(postsPerRequest), Default: 50})

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # From https://www.digitalocean.com/community/tutorials/how-to-build-go-executables-for-multiple-platforms-on-ubuntu-16-04
 
-package_name="wallpaper-downloader"
+package_name="Tapet"
 
 platforms=("linux/amd64" "windows/amd64" "darwin/amd64")
 
