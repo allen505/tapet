@@ -56,6 +56,7 @@ Arguments:
 -P  --portrait    Turn on to allow portrait images. Default: false
     --width       Minimum Width of images (in pixels). Default: 1920
     --height      Minimum Height of images (in pixels). Default: 1080
+-v  --version     Check version of program. Default: false
 ```
 
 ## Installation
@@ -75,16 +76,4 @@ Arguments:
 2. Open a terminal and navigate to the downloaded file
 3. Run `.\wallpaper-downloader-windows-amd64.exe` to run with the default settings
 4. By default the wallpapers will be download to the directory where the file is present. You can use the `-o` or `--output` argument to specify an Output Directory
-5. Run `.\wallpaper-downloader-windows-amd64.exe -h` for help menu
-
-## Customization
-
-Since the code is open sourced _wallpaper-downloader_ is highly customizable. The following parameters can be modified by editing the lines immediately after the `import()` statements in the `getWalls.go` file:
-
-- Destination Folder
-- Minimum Width
-- Minimum Height
-- Client Timeout Duration (in seconds)
-- Posts per Request
-- Cap limit of threads
-- Cap limit of name size
+5. Run `.\wallpaper-downloader-windows-amd64.exe -h` for help menu  

@@ -31,6 +31,7 @@ var (
 	maxThreads      int           = 8
 	maxNameLength   int           = 40
 	allowPortrait   bool
+	currVersion     string = "0.2-beta"
 )
 
 type jsonStruct struct {
@@ -141,8 +142,8 @@ func makeHTTPReq(URL string) *http.Response {
 
 func getJSON(URL string, target interface{}) ([]interface{}, string) {
 	resp := makeHTTPReq(URL)
-	
-	if resp == nil{
+
+	if resp == nil {
 		prettyPrintDanger("Couldn't fetch Post details")
 	}
 	defer resp.Body.Close()
@@ -272,7 +273,7 @@ func knownURL(post string) bool {
 func storeImg(imgURL string) bool {
 	resp := makeHTTPReq(imgURL)
 
-	if resp == nil{
+	if resp == nil {
 		return false
 	}
 
@@ -404,10 +405,15 @@ func parallelizeDownload(posts []postStruct, numberOfThreads int) {
 	subRoutines.Wait()
 }
 
-func validateParameters(minWidthArg int, minHeightArg int, portrait bool, numberOfThreads *int, numberOfImages *int) {
+func validateParameters(minWidthArg int, minHeightArg int, portrait bool, numberOfThreads *int, numberOfImages *int, versionFlag bool) {
 	minWidth = minWidthArg
 	minHeight = minHeightArg
 	allowPortrait = portrait
+
+	if versionFlag {
+		prettyPrintSuccess("Version: " + currVersion)
+		os.Exit(0)
+	}
 
 	if *numberOfThreads > maxThreads {
 		prettyPrintWarning("To save resources number of Threads is capped at " + strconv.Itoa(maxThreads))
@@ -437,6 +443,7 @@ func main() {
 	var allowPortraitArg *bool = parser.Flag("P", "portrait", &argparse.Options{Required: false, Help: "Turn on to allow portrait images", Default: false})
 	var minWidthArg *int = parser.Int("", "width", &argparse.Options{Required: false, Help: "Minimum Width of images (in pixels)", Default: 1920})
 	var minHeightArg *int = parser.Int("", "height", &argparse.Options{Required: false, Help: "Minimum Height of images (in pixels)", Default: 1080})
+	var versionFlag *bool = parser.Flag("v", "version", &argparse.Options{Required: false, Help: "Check version of program", Default: false})
 
 	var posts []postStruct
 
@@ -459,7 +466,7 @@ func main() {
 		prettyPrintDanger("Failed to create directory")
 	}
 
-	validateParameters(*minWidthArg, *minHeightArg, *allowPortraitArg, numberOfThreads, numberOfImages)
+	validateParameters(*minWidthArg, *minHeightArg, *allowPortraitArg, numberOfThreads, numberOfImages, *versionFlag)
 	printInitialStats(absolutePath, *numberOfThreads, *numberOfImages, *popularity, *topRange, *subredditName)
 
 	posts = getPosts(*subredditName, *popularity, *topRange, postsPerRequest, *numberOfImages/postsPerRequest)
